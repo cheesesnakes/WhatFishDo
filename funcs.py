@@ -45,3 +45,33 @@ def select_folder():
     folder = filedialog.askdirectory()
     
     return folder
+
+# draw rectangle on frame
+
+drawing_state = {
+    'drawing': False,
+    'pt1': None,
+    'pt2': None
+}
+
+def draw_rectangle(event, x, y, flags, param):
+    global drawing_state
+    
+    if event == cv2.EVENT_LBUTTONDOWN:
+        drawing_state['drawing'] = True
+        drawing_state['pt1'] = (x, y)
+        
+    elif event == cv2.EVENT_MOUSEMOVE:
+        if drawing_state['drawing']:
+            drawing_state['pt2'] = (x, y)
+            
+    elif event == cv2.EVENT_LBUTTONUP:
+        drawing_state['drawing'] = False
+        drawing_state['pt2'] = (x, y)
+
+def get_points():
+    return drawing_state['pt1'], drawing_state['pt2']
+
+def clear_points():
+    drawing_state['pt1'] = None
+    drawing_state['pt2'] = None

@@ -3,13 +3,13 @@
 
 import cv2
 import os
-from funcs import resize_frame, select_folder
+from funcs import resize_frame, select_folder, draw_rectangle, get_points, clear_points
 
 # open all the videos in a folder
 
-#folder = "/home/cheesesnakes/Storage/large-files/chapter-4/videos/20250114/barracuda"
+folder = "/home/cheesesnakes/Storage/large-files/chapter-4/videos/20250114/barracuda"
 
-folder = select_folder()
+#folder = select_folder()
 
 # set environment variables
 
@@ -35,7 +35,7 @@ for file in files:
     
     print(f"Parent folder: {folder}", f"File name: {file}", sep="\n")
     
-    # set paused to False
+    # set vdieo state
     
     paused = False
     
@@ -66,11 +66,19 @@ for file in files:
             # resize frame to fit screen
             
             frame = resize_frame(frame = frame, window_name="fish-behavior-video")
-                    
-            # show the frame
-        
-            cv2.imshow("fish-behavior-video", frame)
-        
+            
+            cv2.setMouseCallback("fish-behavior-video", draw_rectangle)
+            
+            # Draw rectangle if points exist
+            pt1, pt2 = get_points()
+            
+            if pt1 and pt2:
+                frame_copy = frame.copy()
+                cv2.rectangle(frame_copy, pt1, pt2, (0, 255, 0), 2)
+                cv2.imshow("fish-behavior-video", frame_copy)
+            else:
+                cv2.imshow("fish-behavior-video", frame)
+            
         # play the video
         
         key = cv2.waitKey(1) & 0xFF
@@ -84,7 +92,10 @@ for file in files:
         elif key == ord(" "):
             
             paused = not paused
+        
+        elif key == ord("c"):  # Clear rectangle
             
+            clear_points()  
     
     # release the video
     
