@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import filedialog
 from uuid import uuid4
 import json
+import os
 
 def resize_frame(frame, window_name="Video"):
     # Get actual screen resolution
@@ -93,10 +94,28 @@ def save_image(frame, coordinates, fish_id):
     cv2.imwrite(f"fish_images/{fish_id}.png", fish_image)
     
     print(f"Image saved successfully as fish_images/{fish_id}.png")
-    
+
+def save_to_json(data):
+    try:
+        # Load existing data if file exists
+        existing_data = {}
+        if os.path.exists('data.json'):
+            with open('data.json', 'r') as f:
+                existing_data = json.load(f)
+        
+        # Update with new data
+        existing_data.update(data)
+        
+        # Write back to file
+        with open('data.json', 'w') as f:
+            json.dump(existing_data, f, indent=4)
+        
+    except Exception as e:
+        print(f"Error saving to JSON: {e}")
+
 # enter data on fish individuals
 
-def enter_data(frame, data, file):
+def enter_data(frame, data, file, deployment_id):
     
     global drawing_state
     
@@ -106,7 +125,7 @@ def enter_data(frame, data, file):
         
         # give the individual a unique id
         
-        fish_id = str(uuid4())
+        fish_id = '_'.join([deployment_id, str(len(data)+1)])
         
         # get the coordinates of the rectangle
         
@@ -145,10 +164,7 @@ def enter_data(frame, data, file):
         
         save_image(frame, (x1, y1, x2, y2), fish_id)
         
-        with open('data.json', 'w') as f:
-            json.dump(data, f, indent=4)
-            
-        
+        save_to_json(data)
         
         
         

@@ -11,6 +11,20 @@ folder = "/home/cheesesnakes/Storage/large-files/chapter-4/videos/20250114/barra
 
 #folder = select_folder()
 
+# set deployment id
+
+## seperate folder by '/'
+
+deployment_id = folder.split("/")
+
+## get last two elements
+
+deployment_id = deployment_id[-2:]
+
+## join the elements in reverse order separated by '_'
+
+deployment_id = "_".join(deployment_id[::-1])
+
 # set environment variables
 
 os.environ['OPENCV_FFMPEG_READ_ATTEMPTS'] = '100000'
@@ -84,7 +98,7 @@ for file in files:
                 
                 cv2.imshow("fish-behavior-video", frame_copy)
                 
-                enter_data(frame=frame, data=data, file=path)
+                enter_data(frame=frame, data=data, file=path, deployment_id=deployment_id)
             
             else:
                 cv2.imshow("fish-behavior-video", frame)
