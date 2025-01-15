@@ -26,7 +26,6 @@ deployment_id = deployment_id[-2:]
 deployment_id = "_".join(deployment_id[::-1])
 
 # set environment variables
-
 os.environ['OPENCV_FFMPEG_READ_ATTEMPTS'] = '100000'
 
 # get all the files in the folder
@@ -56,6 +55,9 @@ for file in files:
     # set vdieo state
     
     paused = False
+    SKIP_SECONDS = 2
+    speed = 1
+    i=0
     
     # loop through the frames
     
@@ -63,49 +65,54 @@ for file in files:
         
         if not paused:
             
-            # read the frame
-        
-            ret, frame = video.read()
-
-            # get length of the video
+            ret = video.grab()
             
-            length = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-            
-            # get fps of the video
-            
-            fps = int(video.get(cv2.CAP_PROP_FPS))
-            
-            # if the frame is empty, break
+            i += 1
         
             if not ret:
                 
                 break
             
-            # resize frame to fit screen
-            
-            frame = resize_frame(frame = frame, window_name="fish-behavior-video")
-            
-            cv2.setMouseCallback("fish-behavior-video", draw_rectangle)
-            
-            # Draw rectangle if points exist
-            pt1, pt2 = get_points()
-            
-            if pt1 and pt2:
+            if i % speed == 0:
                 
-                frame_copy = frame.copy()
+                ret, frame = video.retrieve()
                 
-                cv2.rectangle(frame_copy, pt1, pt2, (0, 255, 0), 2)
+                if not ret:
+                    
+                    break
                 
-                cv2.imshow("fish-behavior-video", frame_copy)
+                frame = resize_frame(frame = frame, window_name="fish-behavior-video")
                 
-                enter_data(frame=frame, data=data, file=path, deployment_id=deployment_id)
-            
-            else:
-                cv2.imshow("fish-behavior-video", frame)
-            
+                cv2.setMouseCallback("fish-behavior-video", draw_rectangle)
+                
+                # Draw rectangle if points exist
+                pt1, pt2 = get_points()
+                
+                if pt1 and pt2:
+                    
+                    frame_copy = frame.copy()
+                    
+                    cv2.rectangle(frame_copy, pt1, pt2, (0, 255, 0), 2)
+                    
+                    cv2.putText(frame_copy, f"Playback Speed = {speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    
+                    cv2.imshow("fish-behavior-video", frame_copy)
+                    
+                    enter_data(frame=frame, data=data, file=path, deployment_id=deployment_id)
+
+                else:
+                    
+                    cv2.putText(frame, f"Playback Speed = {speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    
+                    cv2.imshow("fish-behavior-video", frame)
+                    
+                    
+                    
         # play the video
         
-        key = cv2.waitKey(1) & 0xFF
+        fps = video.get(cv2.CAP_PROP_FPS)
+        
+        key = cv2.waitKey(int(1000/(fps*speed))) & 0xFF
     
         # if the user presses 'q', break
     
@@ -117,10 +124,37 @@ for file in files:
             
             paused = not paused
         
-        elif key == ord("c"):  # Clear rectangle
+        elif key == ord(","):  # Skip backward 5s
+
+            current_frame = video.get(cv2.CAP_PROP_POS_FRAMES)
             
-            clear_points()  
-    
+            fps = video.get(cv2.CAP_PROP_FPS)
+            
+            frames_to_skip = int(fps * SKIP_SECONDS)
+            
+            target_frame = max(0, current_frame - frames_to_skip)
+            
+            video.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+        
+        elif key == ord("."):  # Skip backward 5s
+
+            current_frame = video.get(cv2.CAP_PROP_POS_FRAMES)
+            
+            fps = video.get(cv2.CAP_PROP_FPS)
+            
+            frames_to_skip = int(fps * SKIP_SECONDS)
+            
+            target_frame = max(0, current_frame + frames_to_skip)
+            
+            video.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+            
+        elif key == ord("["):
+            
+            speed = max(0.5, speed - 0.5)
+        
+        elif key == ord("]"):
+            
+            speed = min(10, speed + 0.5)
     # release the video
     
     video.release()
