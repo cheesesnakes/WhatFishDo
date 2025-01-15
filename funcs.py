@@ -1,9 +1,10 @@
 import cv2
 import tkinter as tk
 from tkinter import filedialog
-from uuid import uuid4
 import json
 import os
+import tkinter as tk
+from tkinter import ttk
 
 def resize_frame(frame, window_name="Video"):
     # Get actual screen resolution
@@ -119,52 +120,71 @@ def enter_data(frame, data, file, deployment_id):
     
     global drawing_state
     
-    # if a rectangle is drawn
-    
-    if drawing_state['pt1'] and drawing_state['pt2'] and drawing_state['drawing'] == False:
+    if drawing_state['pt1'] and drawing_state['pt2'] and not drawing_state['drawing']:
         
-        # give the individual a unique id
+        # Create main window
         
+        root = tk.Tk()
+        root.title("Fish Data Entry")
+        root.geometry("400x300")
+        
+        # Variables
+        
+        species_var = tk.StringVar()
+        group_var = tk.StringVar()
+        size_var = tk.StringVar()
+        remarks_var = tk.StringVar()
         fish_id = '_'.join([deployment_id, str(len(data)+1)])
         
-        # get the coordinates of the rectangle
+        # Species dropdown
         
-        x1, y1 = drawing_state['pt1']
-        x2, y2 = drawing_state['pt2']
+        ttk.Label(root, text="Species:").pack(pady=5)
+        species_box = ttk.Entry(root, textvariable=species_var)
+        species_box.pack(pady=5)
         
-        # enter the species of the fish
+        # Group dropdown
         
-        species = input("Enter the species of the fish: ")
+        ttk.Label(root, text="Group:").pack(pady=5)
+        group_box = ttk.Entry(root, textvariable=group_var)
+        group_box.pack(pady=5)
         
-        # enter the size class between 0 - 80 in steps of 10
+        # Size class slider
+        ttk.Label(root, text="Size Class (cm):").pack(pady=5)
+        size_classes = ['0-10', '10-20', '20-30', '30-40', '40-50', '50-60', '60-70', '70-80', '80+']
+        size_slider = ttk.Combobox(root, values=size_classes, textvariable=size_var)
+        size_slider.pack(pady=5)
         
-        size_class = input("Enter the size class of the fish (0 - 80 in steps of 10): ")
+        # Remarks
+        ttk.Label(root, text="Remarks:").pack(pady=5)
+        remarks_entry = ttk.Entry(root, textvariable=remarks_var)
+        remarks_entry.pack(pady=5)
         
-        # enter any remarks
+        def save_and_close():
+            x1, y1 = drawing_state['pt1']
+            x2, y2 = drawing_state['pt2']
+            
+            data[fish_id] = {
+                'species': species_var.get(),
+                'size_class': size_var.get(),
+                'remarks': remarks_var.get(),
+                'coordinates': (x1, y1, x2, y2),
+                'file': file
+            }
+            
+            save_image(frame, (x1, y1, x2, y2), fish_id)
+            save_to_json(data)
+            clear_points()
+            root.destroy()
         
-        remarks = input("Enter any remarks: ")
+        def cancel():
+            clear_points()
+            root.destroy()
         
-        # add the data to the dictionary
+        # Buttons
+        ttk.Button(root, text="Save", command=save_and_close).pack(pady=10)
+        ttk.Button(root, text="Cancel", command=cancel).pack(pady=5)
         
-        data[fish_id] = {
-            'species': species,
-            'size_class': size_class,
-            'remarks': remarks,
-            'coordinates': (x1, y1, x2, y2),
-            'file': file
-        }
-        
-        # clear the rectangle
-        
-        clear_points()
-        
-        print(f"Fish {fish_id} added successfully!", f"Total fish: {len(data)}", sep="\n")
-        
-        # save 
-        
-        save_image(frame, (x1, y1, x2, y2), fish_id)
-        
-        save_to_json(data)
-        
+        root.mainloop()
+
         
         
