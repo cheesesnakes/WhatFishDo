@@ -1,6 +1,8 @@
 import cv2
 import tkinter as tk
 from tkinter import filedialog
+from uuid import uuid4
+import json
 
 def resize_frame(frame, window_name="Video"):
     # Get actual screen resolution
@@ -75,3 +77,78 @@ def get_points():
 def clear_points():
     drawing_state['pt1'] = None
     drawing_state['pt2'] = None
+
+# save the image within the rectangle
+
+def save_image(frame, coordinates, fish_id):
+    
+    x1, y1, x2, y2 = coordinates
+    
+    # get the fish image
+    
+    fish_image = frame[y1:y2, x1:x2]
+    
+    # save the image
+    
+    cv2.imwrite(f"fish_images/{fish_id}.png", fish_image)
+    
+    print(f"Image saved successfully as fish_images/{fish_id}.png")
+    
+# enter data on fish individuals
+
+def enter_data(frame, data, file):
+    
+    global drawing_state
+    
+    # if a rectangle is drawn
+    
+    if drawing_state['pt1'] and drawing_state['pt2'] and drawing_state['drawing'] == False:
+        
+        # give the individual a unique id
+        
+        fish_id = str(uuid4())
+        
+        # get the coordinates of the rectangle
+        
+        x1, y1 = drawing_state['pt1']
+        x2, y2 = drawing_state['pt2']
+        
+        # enter the species of the fish
+        
+        species = input("Enter the species of the fish: ")
+        
+        # enter the size class between 0 - 80 in steps of 10
+        
+        size_class = input("Enter the size class of the fish (0 - 80 in steps of 10): ")
+        
+        # enter any remarks
+        
+        remarks = input("Enter any remarks: ")
+        
+        # add the data to the dictionary
+        
+        data[fish_id] = {
+            'species': species,
+            'size_class': size_class,
+            'remarks': remarks,
+            'coordinates': (x1, y1, x2, y2),
+            'file': file
+        }
+        
+        # clear the rectangle
+        
+        clear_points()
+        
+        print(f"Fish {fish_id} added successfully!", f"Total fish: {len(data)}", sep="\n")
+        
+        # save 
+        
+        save_image(frame, (x1, y1, x2, y2), fish_id)
+        
+        with open('data.json', 'w') as f:
+            json.dump(data, f, indent=4)
+            
+        
+        
+        
+        
