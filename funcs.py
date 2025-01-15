@@ -1,5 +1,6 @@
 import cv2
 import tkinter as tk
+from tkinter import filedialog
 
 def resize_frame(frame, window_name="Video"):
     # Get actual screen resolution
@@ -33,3 +34,14 @@ def resize_frame(frame, window_name="Video"):
     cv2.moveWindow(window_name, x, y)
     
     return resized_frame
+
+# dialog for selecting folder
+
+def select_folder():
+    
+    root = tk.Tk()
+    root.withdraw()
+    
+    folder = filedialog.askdirectory()
+    
+    return folder

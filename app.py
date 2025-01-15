@@ -3,11 +3,13 @@
 
 import cv2
 import os
-from funcs import resize_frame
+from funcs import resize_frame, select_folder
 
 # open all the videos in a folder
 
-folder = "/home/cheesesnakes/Storage/large-files/chapter-4/videos/20250114/barracuda"
+#folder = "/home/cheesesnakes/Storage/large-files/chapter-4/videos/20250114/barracuda"
+
+folder = select_folder()
 
 # set environment variables
 
@@ -33,36 +35,42 @@ for file in files:
     
     print(f"Parent folder: {folder}", f"File name: {file}", sep="\n")
     
+    # set paused to False
+    
+    paused = False
+    
     # loop through the frames
     
     while True:
-    
-        # read the frame
-    
-        ret, frame = video.read()
-
-        # get length of the video
         
-        length = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-        
-        # get fps of the video
-        
-        fps = int(video.get(cv2.CAP_PROP_FPS))
-        
-        # if the frame is empty, break
-    
-        if not ret:
+        if not paused:
             
-            break
+            # read the frame
         
-        # resize frame to fit screen
+            ret, frame = video.read()
+
+            # get length of the video
+            
+            length = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+            
+            # get fps of the video
+            
+            fps = int(video.get(cv2.CAP_PROP_FPS))
+            
+            # if the frame is empty, break
         
-        frame = resize_frame(frame = frame, window_name="fish-behavior-video")
+            if not ret:
                 
-        # show the frame
-    
-        cv2.imshow("fish-behavior-video", frame)
-    
+                break
+            
+            # resize frame to fit screen
+            
+            frame = resize_frame(frame = frame, window_name="fish-behavior-video")
+                    
+            # show the frame
+        
+            cv2.imshow("fish-behavior-video", frame)
+        
         # play the video
         
         key = cv2.waitKey(1) & 0xFF
@@ -71,7 +79,12 @@ for file in files:
     
         if key == ord("q"):
             
-            break
+            break 
+        
+        elif key == ord(" "):
+            
+            paused = not paused
+            
     
     # release the video
     
