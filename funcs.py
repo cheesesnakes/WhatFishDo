@@ -126,7 +126,7 @@ def enter_data(frame, data, file, deployment_id):
         
         root = tk.Tk()
         root.title("Fish Data Entry")
-        root.geometry("400x300")
+        root.geometry("400x400")
         
         # Variables
         
