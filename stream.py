@@ -126,7 +126,7 @@ class VideoStream:
                 
                 print("Buffering...")
                 
-                time.sleep(2)
+                time.sleep(0.2)
                 
                 continue
         
@@ -170,27 +170,11 @@ class VideoStream:
         
         elif key == ord(","):  # Skip backward 
 
-            current_frame = self.stream.get(cv2.CAP_PROP_POS_FRAMES)
-            
-            fps = self.stream.get(cv2.CAP_PROP_FPS)
-            
-            frames_to_skip = int(fps * self.skip_seconds)
-            
-            target_frame = max(0, current_frame - frames_to_skip)
-            
-            self.stream.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+            self.seek(-self.skip_seconds)
         
         elif key == ord("."):  # Skip backward
 
-            current_frame = self.stream.get(cv2.CAP_PROP_POS_FRAMES)
-            
-            fps = self.stream.get(cv2.CAP_PROP_FPS)
-            
-            frames_to_skip = int(fps * self.skip_seconds)
-            
-            target_frame = max(0, current_frame + frames_to_skip)
-            
-            self.stream.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+            self.seek(self.skip_seconds)
             
         elif key == ord("["): # decrease speed
             
@@ -202,8 +186,31 @@ class VideoStream:
         
         elif key == ord("t"): # seek
             
-            seek(self.stream)
-                        
+            seek_time = input("Enter time in seconds: ")
+            
+            seek_time = int(seek_time)
+            
+            self.seek(seek_time)
+    
+    def seek(self, seconds):
+            
+        with self.lock:
+        
+            # Clear queue
+            while not self.Q.empty():
+            
+                self.Q.get()
+        
+            current_frame = self.stream.get(cv2.CAP_PROP_POS_FRAMES)
+            
+            fps = self.stream.get(cv2.CAP_PROP_FPS)
+            
+            frames_to_skip = int(fps * seconds)
+            
+            target_frame = current_frame + frames_to_skip
+            
+            self.stream.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+                            
     def stop(self):
         
         # set stop state
