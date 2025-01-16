@@ -6,7 +6,7 @@ from funcs import resize_frame, draw_rectangle, get_points, enter_data, seek
 
 class VideoStream:
     
-    def __init__(self, data, deployment_id, path, skip_seconds = 2, queue_size=2048):
+    def __init__(self, data, deployment_id, path, skip_seconds = 2, queue_size=512):
         self.stream = cv2.VideoCapture(path, cv2.CAP_FFMPEG)
         self.data = data
         self.deployment_id = deployment_id
@@ -76,7 +76,7 @@ class VideoStream:
 
         while not self.stopped:
         
-            if not self.Q.empty():
+            if not self.Q.empty() and not self.paused:
                 
                 # get frame from the queue
                 
@@ -111,12 +111,22 @@ class VideoStream:
                     cv2.imshow(window_name, frame)                 
             
                 self.key_event()
-
+    
             else:
                 
-                print("Queue is empty")
+                if self.paused:
+                    
+                    while self.paused:
+                        
+                        time.sleep(0.1)
+                        
+                        self.key_event()
+                        
+                    continue
                 
-                time.sleep(5)
+                print("Buffering...")
+                
+                time.sleep(2)
                 
                 continue
         
@@ -149,6 +159,14 @@ class VideoStream:
         elif key == ord(" "): #pause
             
             self.paused = not self.paused
+            
+            if self.paused:
+                
+                print("Paused")
+            
+            else:
+                
+                print("Resumed")
         
         elif key == ord(","):  # Skip backward 
 
