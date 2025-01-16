@@ -11,11 +11,14 @@ from tkinter import ttk
 # resize the frame
 
 def resize_frame(frame, window_name="Video"):
+    
+    
     # Get actual screen resolution
     root = tk.Tk()
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
     root.destroy()
+    
     
     # Get frame dimensions
     frame_height, frame_width = frame.shape[:2]
@@ -41,11 +44,12 @@ def resize_frame(frame, window_name="Video"):
     y = (screen_height - new_height) // 2
     cv2.moveWindow(window_name, x, y)
     
+    
     return resized_frame
 
 # dialog for selecting folder
 
-def select_folder():
+def select_file():
     
     root = tk.Tk()
     
@@ -57,17 +61,17 @@ def select_folder():
     
     # select folder
     
-    folder = filedialog.askdirectory()
+    file = filedialog.askopenfilename()
     
-    # handle no folder selected
+    # handle no file selected
     
-    if not folder:
+    if not file:
         
-        print("No folder selected")
+        print("No file selected")
         
         exit()
     
-    return folder
+    return file
 
 # draw rectangle on frame
 
