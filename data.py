@@ -102,32 +102,46 @@ def enter_data(frame, video, data, file, deployment_id):
 
 # calculate time the individual has been in the frame
 
-def time_out(data, video):
+def time_out(video):
     
     """After enter_data is run, continue until click and record time out"""
     
     # get the last fish id
     
-    fish_id = list(data.keys())[-1]
+    fish_id = list(video.data.keys())[-1]
     
     # get the time out
     
-    time_out = current_time(video)
+    time_out = current_time(video.stream)
     
     # update the data
     
-    data[fish_id]['time_out'] = time_out
+    video.data[fish_id]['time_out'] = time_out
     
     # save to json
     
-    save_to_json(data)
+    save_to_json(video.data)
     
-    # reset frame to time in 
+    # get lock
     
-    video.set(cv2.CAP_PROP_POS_MSEC, data[fish_id]['time_in'])
+    with video.lock:
+        
+        # clear queue
+        
+        while not video.Q.empty():
+            
+            video.Q.get()            
+            
+        # reset frame to time in 
+        
+        video.stream.set(cv2.CAP_PROP_POS_MSEC, video.data[fish_id]['time_in'])
+        
+        # pause
+        
+        video.paused = True
     
     # clear points
     
     clear_points()
     
-    print(f"Fish {fish_id} has been recorded from {data[fish_id]['time_in']} to {time_out}")
+    print(f"Fish {fish_id} has been recorded from {video.data[fish_id]['time_in']} to {time_out}")

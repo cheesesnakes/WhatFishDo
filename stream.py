@@ -195,7 +195,7 @@ class VideoStream:
         
         elif key == ord("z"): #time out
             
-            time_out(self.data, self.stream)
+            time_out(self)
     
     def seek(self, seconds):
             
