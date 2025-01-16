@@ -5,7 +5,7 @@
 
 import os
 import json
-from funcs import select_file
+from funcs import select_file, session
 from stream import VideoStream
 
 def app():
@@ -26,10 +26,11 @@ def app():
     print("6. Press '[' to decrease speed")
     print("7. Data and images are saved automatically in the root folder")
     
+    print("\n")
     
-    # open all the videos in the selected file
-
-    file = select_file()
+    # start or resume session
+    
+    file, data = session()
     
     # set deployment id
     deployment_id = file.split("/")
@@ -39,15 +40,7 @@ def app():
     # set environment variables
 
     os.environ['OPENCV_FFMPEG_READ_ATTEMPTS'] = '150000'
-    os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = 'threads;1|video_codec;hevc'
-
-    # create a dictionary to store the data, if data exists, load it
-
-    data = {}
-    
-    if os.path.exists(f"data.json"):
-        
-        data = json.load(open(f"data.json", "r"))     
+    os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = 'threads;1|video_codec;hevc'     
     
     # print parent file and file name
     

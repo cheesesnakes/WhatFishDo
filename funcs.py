@@ -271,3 +271,53 @@ def seek(video):
         print(f"Error seeking video: {e}")
         
         return False
+    
+# resume session function
+
+def session():
+    
+    # prompt user if they want to resume
+    
+    user = input("Do you want to resume from previous session? (y/n): ")
+    
+    if user.lower() != 'y':
+        
+        print("Starting new session. Please select a file.")
+        
+        file = select_file()
+        
+        # create a dictionary to store the data, if data exists, load it
+
+        data = {}
+
+        if os.path.exists(f"data.json"):
+        
+            data = json.load(open(f"data.json", "r"))
+    
+        return file, data
+    
+    # Load data
+    
+    if os.path.exists('data.json'):
+        
+        data = json.load(open('data.json', 'r'))
+        
+        print(f"Resumed from previous session. {len(data)} fish data loaded.")
+        
+        print(f"The last fish encountered was {list(data.keys())[-1]} at 'seconds'")
+        
+        file = list(data.values())[-1]['file']
+        
+        return file, data
+        
+    else:
+        
+        data = {}
+
+        print("No previous data found. Starting new session.")
+        
+        print("Please select a file.")
+        
+        file = select_file()
+        
+        return file, data
