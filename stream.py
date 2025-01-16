@@ -2,7 +2,7 @@ from threading import Thread, Lock
 from queue import Queue
 import cv2
 import time
-from funcs import resize_frame, draw_rectangle, get_points, enter_data, seek
+from funcs import draw_rectangle, get_points, enter_data
 
 class VideoStream:
     

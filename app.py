@@ -14,6 +14,19 @@ def app():
     
     print("Fish Behavior Video Annotation Tool v0.01")
     
+    # Print instructions and key bindings
+    
+    print("Instructions:")
+    
+    print("1. Press '[space]' to pause the video")
+    print("2. Press 'q' to quit the video")
+    print("3. Press ',' to skip backward")
+    print("4. Press '.' to skip forward")
+    print("5. Press ']' to increase speed")
+    print("6. Press '[' to decrease speed")
+    print("7. Data and images are saved automatically in the root folder")
+    
+    
     # open all the videos in the selected file
 
     file = select_file()
