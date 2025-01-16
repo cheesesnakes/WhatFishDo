@@ -41,9 +41,17 @@ def app():
 
     files = os.listdir(folder)
 
-    # create a dictionary to store the data
+    # create a dictionary to store the data, if data exists, load it
 
     data = {}
+    
+    if os.path.exists("data.json"):
+        
+        import json
+        
+        with open("data.json", "r") as file:
+            
+            data = json.load(file)
 
     # loop through the files
 
