@@ -2,7 +2,8 @@ from threading import Thread, Lock
 from queue import Queue
 import cv2
 import time
-from funcs import draw_rectangle, get_points, enter_data
+from funcs import draw_rectangle, get_points
+from data import enter_data
 
 class VideoStream:
     
@@ -102,7 +103,7 @@ class VideoStream:
                     
                     cv2.imshow(window_name, frame_copy)
                     
-                    enter_data(frame=frame, data=self.data, file=self.path, deployment_id=self.deployment_id)
+                    enter_data(frame=frame, data=self.data, file=self.path, deployment_id=self.deployment_id, video=self.stream)
 
                 else:
                     

@@ -5,7 +5,7 @@
 
 import os
 import json
-from funcs import select_file, session
+from funcs import session
 from stream import VideoStream
 
 def app():
