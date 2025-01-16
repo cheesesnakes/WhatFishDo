@@ -6,8 +6,8 @@ from funcs import resize_frame, draw_rectangle, get_points, enter_data, seek
 
 class VideoStream:
     
-    def __init__(self, data, deployment_id, path, skip_seconds = 2, queue_size=128):
-        self.stream = cv2.VideoCapture(path)
+    def __init__(self, data, deployment_id, path, skip_seconds = 2, queue_size=4096):
+        self.stream = cv2.VideoCapture(path, cv2.CAP_FFMPEG)
         self.data = data
         self.deployment_id = deployment_id
         self.path = path
@@ -19,6 +19,9 @@ class VideoStream:
         self.lock = Lock()
         self.fps = self.stream.get(cv2.CAP_PROP_FPS)
         self.Q = Queue(maxsize=queue_size)
+
+        if not self.stream.isOpened():
+            print(f"Error: Unable to open video file {path}")
 
     def start(self):
         
@@ -36,21 +39,38 @@ class VideoStream:
         
     def read(self):
         
-        while not self.stopped:
-        
-            with self.lock:
-        
-                if not self.paused:
-        
+        while True:
+            
+            if self.stopped:
+                
+                print("Stopped reads")
+                
+                return
+            
+            if not self.Q.full():
+                
+                with self.lock:
+                        
                     ret, frame = self.stream.read()
+            
                     
                     if not ret:
-        
-                        print("Stopped reads")
+
+                        print(f"Error: Unable to read frame from video file {self.path}")
                         
-                        break
-        
+                        self.stop()
+                        
+                        return
+                    
                     self.Q.put(frame)
+                
+            else:
+                
+                time.sleep(2)
+                
+                print("Queue is full")
+                
+                continue
 
     def process(self, window_name="fish-behavior-video"):
 
@@ -62,10 +82,10 @@ class VideoStream:
                 
                 frame = self.Q.get()
                 
-                # resize the frame
+                # create window
                 
-                cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-                
+                cv2.namedWindow("fish-behavior-video", cv2.WINDOW_NORMAL)
+        
                 # Area selection (bbox)
                 
                 cv2.setMouseCallback(window_name, draw_rectangle)
@@ -103,12 +123,6 @@ class VideoStream:
         if self.stopped:
     
             print("Stopped processing")
-            
-            return
-        
-        elif self.Q.full():
-            
-            print("Queue is full")
             
             return
             
@@ -191,11 +205,5 @@ class VideoStream:
             self.Q.get()
             
         print("Queue cleared")
-            
-        # join threads
-        
-        for thread in self.threads:
-            
-            thread.join()
-            
+                
         return 
