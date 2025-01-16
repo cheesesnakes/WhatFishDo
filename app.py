@@ -3,13 +3,11 @@
 
 import cv2
 import os
-from funcs import resize_frame, select_folder, draw_rectangle, get_points, clear_points, enter_data
+from funcs import resize_frame, select_folder, draw_rectangle, get_points, enter_data
 
-# open all the videos in a folder
+# open all the videos in the selected folder
 
-folder = "/home/cheesesnakes/Storage/large-files/chapter-4/videos/20250114/barracuda"
-
-#folder = select_folder()
+folder = select_folder()
 
 # set deployment id
 
@@ -26,7 +24,8 @@ deployment_id = deployment_id[-2:]
 deployment_id = "_".join(deployment_id[::-1])
 
 # set environment variables
-os.environ['OPENCV_FFMPEG_READ_ATTEMPTS'] = '100000'
+
+os.environ['OPENCV_FFMPEG_READ_ATTEMPTS'] = '150000'
 
 # get all the files in the folder
 
@@ -50,7 +49,7 @@ for file in files:
     
     # print parent folder and file name
     
-    print(f"Parent folder: {folder}", f"File name: {file}", sep="\n")
+    print(f"Deployment: {deployment_id}", f"File: {file}", sep="\n")
     
     # set vdieo state
     
@@ -63,8 +62,12 @@ for file in files:
     
     while True:
         
+        # check pause state
+        
         if not paused:
             
+            # read the frame
+                
             ret = video.grab()
             
             i += 1
@@ -72,6 +75,8 @@ for file in files:
             if not ret:
                 
                 break
+                
+            # set playback speed
             
             if i % speed == 0:
                 
@@ -81,11 +86,14 @@ for file in files:
                     
                     break
                 
+                # resize the frame
+                
                 frame = resize_frame(frame = frame, window_name="fish-behavior-video")
+                
+                # Area selection (bbox)
                 
                 cv2.setMouseCallback("fish-behavior-video", draw_rectangle)
                 
-                # Draw rectangle if points exist
                 pt1, pt2 = get_points()
                 
                 if pt1 and pt2:
@@ -104,27 +112,25 @@ for file in files:
                     
                     cv2.putText(frame, f"Playback Speed = {speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                     
-                    cv2.imshow("fish-behavior-video", frame)
+                    cv2.imshow("fish-behavior-video", frame)                 
                     
-                    
-                    
-        # play the video
+        # handle key presses
         
         fps = video.get(cv2.CAP_PROP_FPS)
         
         key = cv2.waitKey(int(1000/(fps*speed))) & 0xFF
     
-        # if the user presses 'q', break
+        # key press logic
     
-        if key == ord("q"):
+        if key == ord("q"): #quit
             
             break 
         
-        elif key == ord(" "):
+        elif key == ord(" "): #pause
             
             paused = not paused
         
-        elif key == ord(","):  # Skip backward 5s
+        elif key == ord(","):  # Skip backward 
 
             current_frame = video.get(cv2.CAP_PROP_POS_FRAMES)
             
@@ -136,7 +142,7 @@ for file in files:
             
             video.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
         
-        elif key == ord("."):  # Skip backward 5s
+        elif key == ord("."):  # Skip backward
 
             current_frame = video.get(cv2.CAP_PROP_POS_FRAMES)
             
@@ -148,13 +154,14 @@ for file in files:
             
             video.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
             
-        elif key == ord("["):
+        elif key == ord("["): # decrease speed
             
             speed = max(0.5, speed - 0.5)
         
-        elif key == ord("]"):
+        elif key == ord("]"): # increase speed
             
             speed = min(10, speed + 0.5)
+    
     # release the video
     
     video.release()

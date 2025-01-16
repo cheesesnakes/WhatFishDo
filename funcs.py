@@ -1,3 +1,5 @@
+# requirements
+
 import cv2
 import tkinter as tk
 from tkinter import filedialog
@@ -5,6 +7,8 @@ import json
 import os
 import tkinter as tk
 from tkinter import ttk
+
+# resize the frame
 
 def resize_frame(frame, window_name="Video"):
     # Get actual screen resolution
@@ -95,6 +99,8 @@ def save_image(frame, coordinates, fish_id):
     cv2.imwrite(f"fish_images/{fish_id}.png", fish_image)
     
     print(f"Image saved successfully as fish_images/{fish_id}.png")
+
+# save data to json
 
 def save_to_json(data):
     try:
