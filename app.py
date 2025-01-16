@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Processing video 
 # requirements
 
@@ -14,7 +16,7 @@ def app():
     # open all the videos in the selected folder
 
     folder = select_folder()
-
+    
     # set deployment id
 
     ## seperate folder by '/'
