@@ -149,6 +149,16 @@ def enter_data(frame, data, file, deployment_id):
 
     if drawing_state['pt1'] and drawing_state['pt2'] and not drawing_state['drawing']:
         
+        # prompt user if they want to enter data
+        
+        user = input("Do you want to enter data for this fish? (y/n): ")
+        
+        if user.lower() != 'y':
+            
+            clear_points()
+            
+            return False
+        
         # Variables
         fish_id = '_'.join([deployment_id, str(len(data) + 1)])
 
