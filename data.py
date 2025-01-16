@@ -87,6 +87,7 @@ def enter_data(frame, video, data, file, deployment_id):
             'species': species,
             'group': group,
             'time_in': time_in,
+            'time_out': None,
             'size_class': size_class,
             'remarks': remarks,
             'coordinates': (x1, y1, x2, y2),
@@ -96,3 +97,37 @@ def enter_data(frame, video, data, file, deployment_id):
         save_image(frame, (x1, y1, x2, y2), fish_id)
         save_to_json(data)
         clear_points()
+        
+        print(f"Observing fish {fish_id}, species: {species}, size: {size_class}cm.")
+
+# calculate time the individual has been in the frame
+
+def time_out(data, video):
+    
+    """After enter_data is run, continue until click and record time out"""
+    
+    # get the last fish id
+    
+    fish_id = list(data.keys())[-1]
+    
+    # get the time out
+    
+    time_out = current_time(video)
+    
+    # update the data
+    
+    data[fish_id]['time_out'] = time_out
+    
+    # save to json
+    
+    save_to_json(data)
+    
+    # reset frame to time in 
+    
+    video.set(cv2.CAP_PROP_POS_MSEC, data[fish_id]['time_in'])
+    
+    # clear points
+    
+    clear_points()
+    
+    print(f"Fish {fish_id} has been recorded from {data[fish_id]['time_in']} to {time_out}")

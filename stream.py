@@ -3,7 +3,7 @@ from queue import Queue
 import cv2
 import time
 from funcs import draw_rectangle, get_points
-from data import enter_data
+from data import enter_data, time_out
 
 class VideoStream:
     
@@ -192,6 +192,10 @@ class VideoStream:
             seek_time = int(seek_time)
             
             self.seek(seek_time)
+        
+        elif key == ord("z"): #time out
+            
+            time_out(self.data, self.stream)
     
     def seek(self, seconds):
             
