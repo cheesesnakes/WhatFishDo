@@ -4,6 +4,7 @@
 # requirements
 
 import os
+import json
 from funcs import select_file
 from stream import VideoStream
 
@@ -18,9 +19,8 @@ def app():
     file = select_file()
     
     # set deployment id
-
     deployment_id = file.split("/")
-    deployment_id = deployment_id[-2:]
+    deployment_id = deployment_id[-3:-1]
     deployment_id = "_".join(deployment_id[::-1])
 
     # set environment variables
@@ -31,12 +31,10 @@ def app():
     # create a dictionary to store the data, if data exists, load it
 
     data = {}
-            
-    # get the full path of the file
     
-    path = os.path.join(file, file)
-    
-    print(path)
+    if os.path.exists(f"data.json"):
+        
+        data = json.load(open(f"data.json", "r"))     
     
     # print parent file and file name
     
@@ -44,7 +42,7 @@ def app():
     
     # open the video
     
-    video = VideoStream(data=data, deployment_id=deployment_id, path=path).start()
+    video = VideoStream(data=data, deployment_id=deployment_id, path=file).start()
     
     # initialize the read
     

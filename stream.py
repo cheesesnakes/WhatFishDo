@@ -6,7 +6,7 @@ from funcs import resize_frame, draw_rectangle, get_points, enter_data, seek
 
 class VideoStream:
     
-    def __init__(self, data, deployment_id, path, skip_seconds = 2, queue_size=4096):
+    def __init__(self, data, deployment_id, path, skip_seconds = 2, queue_size=2048):
         self.stream = cv2.VideoCapture(path, cv2.CAP_FFMPEG)
         self.data = data
         self.deployment_id = deployment_id
@@ -66,7 +66,7 @@ class VideoStream:
                 
             else:
                 
-                time.sleep(2)
+                time.sleep(10)
                 
                 print("Queue is full")
                 
@@ -114,9 +114,9 @@ class VideoStream:
 
             else:
                 
-                time.sleep(0.1)
-                
                 print("Queue is empty")
+                
+                time.sleep(5)
                 
                 continue
         
