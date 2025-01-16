@@ -49,7 +49,7 @@ def resize_frame(frame, window_name="Video"):
 
 # dialog for selecting folder
 
-def select_file():
+def select_folder():
     
     root = tk.Tk()
     
@@ -61,17 +61,17 @@ def select_file():
     
     # select folder
     
-    file = filedialog.askopenfilename()
+    folder = filedialog.askdirectory()
     
-    # handle no file selected
+    # handle no folder selected
     
-    if not file:
+    if not folder:
         
-        print("No file selected")
+        print("No folder selected")
         
         exit()
     
-    return file
+    return folder
 
 # draw rectangle on frame
 

@@ -64,8 +64,8 @@ class VideoStream:
                 
                 # resize the frame
                 
-                frame = resize_frame(frame = frame, window_name=window_name)
-
+                cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+                
                 # Area selection (bbox)
                 
                 cv2.setMouseCallback(window_name, draw_rectangle)
