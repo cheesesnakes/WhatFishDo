@@ -207,5 +207,86 @@ def enter_data(frame, data, file, deployment_id):
         
         root.mainloop()
 
+# time seek functiono
+
+def seek(video):
+    
+    """Seek to specific time in video"""
+    
+    try:
         
+        # Get video properties
         
+        fps = video.get(cv2.CAP_PROP_FPS)
+        total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+        duration = total_frames / fps
+        
+        # create a window
+        
+        root = tk.Tk()
+        root.title("Seek Time")
+        root.geometry("200x200")
+        
+        # Variables
+        
+        time_var = tk.DoubleVar()
+        ttk.Label(root, text=f"Enter time (0-{duration:.1f} seconds):").pack(pady=5)
+        time_box = ttk.Entry(root, textvariable=time_var)
+        time_box.pack(pady=5)
+        
+        # Ok and Cancel buttons
+        
+        def on_ok():
+            
+            try:
+                
+                target_seconds = int(time_var.get())
+                
+                # Calculate target frame
+                
+                target_frame = int(target_seconds * fps)
+                
+                # Validate target
+                
+                if target_frame < 0 or target_frame > total_frames:
+                    
+                    print(f"Invalid time. Video duration: {duration:.2f}s")
+                    
+                    return False
+                    
+                # Set position
+                
+                video.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+                
+                # destroy the window
+                
+                root.destroy()
+                
+                return True
+            
+            except Exception as e:
+                
+                print(f"Error seeking video: {e}")
+                
+                root.destroy()
+                
+                return False 
+        
+        def on_cancel():
+            
+            root.destroy()
+            
+            return True
+        
+        # Buttons
+        
+        ttk.Button(root, text="OK", command=on_ok).pack(pady=5)
+        ttk.Button(root, text="Cancel", command=on_cancel).pack(pady=5)
+        
+        root.mainloop()
+        
+    except Exception as e:
+        
+        print(f"Error seeking video: {e}")
+        
+        return False

@@ -5,7 +5,7 @@
 
 import cv2
 import os
-from funcs import resize_frame, select_folder, draw_rectangle, get_points, enter_data
+from funcs import resize_frame, select_folder, draw_rectangle, get_points, enter_data, seek
 
 def app():
 
@@ -122,6 +122,12 @@ def app():
                         
                         cv2.imshow("fish-behavior-video", frame)                 
                         
+                        # handle key presses
+                        
+                        fps = video.get(cv2.CAP_PROP_FPS)
+            
+                        key = cv2.waitKey(int(1000/(fps*speed))) & 0xFF
+        
             # handle key presses
             
             fps = video.get(cv2.CAP_PROP_FPS)
@@ -171,7 +177,11 @@ def app():
             elif key == ord("]"): # increase speed
                 
                 speed = min(10, speed + 0.5)
-        
+            
+            elif key == ord("t"): # seek
+                
+                seek(video)
+                
         # release the video
         
         video.release()
