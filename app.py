@@ -5,167 +5,179 @@ import cv2
 import os
 from funcs import resize_frame, select_folder, draw_rectangle, get_points, enter_data
 
-# open all the videos in the selected folder
+def app():
 
-folder = select_folder()
-
-# set deployment id
-
-## seperate folder by '/'
-
-deployment_id = folder.split("/")
-
-## get last two elements
-
-deployment_id = deployment_id[-2:]
-
-## join the elements in reverse order separated by '_'
-
-deployment_id = "_".join(deployment_id[::-1])
-
-# set environment variables
-
-os.environ['OPENCV_FFMPEG_READ_ATTEMPTS'] = '150000'
-
-# get all the files in the folder
-
-files = os.listdir(folder)
-
-# create a dictionary to store the data
-
-data = {}
-
-# loop through the files
-
-for file in files:
+    # welcome message
     
-    # get the full path of the file
+    print("Fish Behavior Video Annotation Tool v0.01")
     
-    path = os.path.join(folder, file)
-    
-    # open the video
-    
-    video = cv2.VideoCapture(path)
-    
-    # print parent folder and file name
-    
-    print(f"Deployment: {deployment_id}", f"File: {file}", sep="\n")
-    
-    # set vdieo state
-    
-    paused = False
-    SKIP_SECONDS = 2
-    speed = 1
-    i=0
-    
-    # loop through the frames
-    
-    while True:
+    # open all the videos in the selected folder
+
+    folder = select_folder()
+
+    # set deployment id
+
+    ## seperate folder by '/'
+
+    deployment_id = folder.split("/")
+
+    ## get last two elements
+
+    deployment_id = deployment_id[-2:]
+
+    ## join the elements in reverse order separated by '_'
+
+    deployment_id = "_".join(deployment_id[::-1])
+
+    # set environment variables
+
+    os.environ['OPENCV_FFMPEG_READ_ATTEMPTS'] = '150000'
+
+    # get all the files in the folder
+
+    files = os.listdir(folder)
+
+    # create a dictionary to store the data
+
+    data = {}
+
+    # loop through the files
+
+    for file in files:
         
-        # check pause state
+        # get the full path of the file
         
-        if not paused:
-            
-            # read the frame
-                
-            ret = video.grab()
-            
-            i += 1
+        path = os.path.join(folder, file)
         
-            if not ret:
-                
-                break
-                
-            # set playback speed
+        # open the video
+        
+        video = cv2.VideoCapture(path)
+        
+        # print parent folder and file name
+        
+        print(f"Deployment: {deployment_id}", f"File: {file}", sep="\n")
+        
+        # set vdieo state
+        
+        paused = False
+        SKIP_SECONDS = 2
+        speed = 1
+        i=0
+        
+        # loop through the frames
+        
+        while True:
             
-            if i % speed == 0:
+            # check pause state
+            
+            if not paused:
                 
-                ret, frame = video.retrieve()
+                # read the frame
+                    
+                ret = video.grab()
                 
+                i += 1
+            
                 if not ret:
                     
                     break
-                
-                # resize the frame
-                
-                frame = resize_frame(frame = frame, window_name="fish-behavior-video")
-                
-                # Area selection (bbox)
-                
-                cv2.setMouseCallback("fish-behavior-video", draw_rectangle)
-                
-                pt1, pt2 = get_points()
-                
-                if pt1 and pt2:
                     
-                    frame_copy = frame.copy()
+                # set playback speed
+                
+                if i % speed == 0:
                     
-                    cv2.rectangle(frame_copy, pt1, pt2, (0, 255, 0), 2)
+                    ret, frame = video.retrieve()
                     
-                    cv2.putText(frame_copy, f"Playback Speed = {speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    if not ret:
+                        
+                        break
                     
-                    cv2.imshow("fish-behavior-video", frame_copy)
+                    # resize the frame
                     
-                    enter_data(frame=frame, data=data, file=path, deployment_id=deployment_id)
+                    frame = resize_frame(frame = frame, window_name="fish-behavior-video")
+                    
+                    # Area selection (bbox)
+                    
+                    cv2.setMouseCallback("fish-behavior-video", draw_rectangle)
+                    
+                    pt1, pt2 = get_points()
+                    
+                    if pt1 and pt2:
+                        
+                        frame_copy = frame.copy()
+                        
+                        cv2.rectangle(frame_copy, pt1, pt2, (0, 255, 0), 2)
+                        
+                        cv2.putText(frame_copy, f"Playback Speed = {speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                        
+                        cv2.imshow("fish-behavior-video", frame_copy)
+                        
+                        enter_data(frame=frame, data=data, file=path, deployment_id=deployment_id)
 
-                else:
-                    
-                    cv2.putText(frame, f"Playback Speed = {speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                    
-                    cv2.imshow("fish-behavior-video", frame)                 
-                    
-        # handle key presses
-        
-        fps = video.get(cv2.CAP_PROP_FPS)
-        
-        key = cv2.waitKey(int(1000/(fps*speed))) & 0xFF
-    
-        # key press logic
-    
-        if key == ord("q"): #quit
-            
-            break 
-        
-        elif key == ord(" "): #pause
-            
-            paused = not paused
-        
-        elif key == ord(","):  # Skip backward 
-
-            current_frame = video.get(cv2.CAP_PROP_POS_FRAMES)
+                    else:
+                        
+                        cv2.putText(frame, f"Playback Speed = {speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                        
+                        cv2.imshow("fish-behavior-video", frame)                 
+                        
+            # handle key presses
             
             fps = video.get(cv2.CAP_PROP_FPS)
             
-            frames_to_skip = int(fps * SKIP_SECONDS)
-            
-            target_frame = max(0, current_frame - frames_to_skip)
-            
-            video.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+            key = cv2.waitKey(int(1000/(fps*speed))) & 0xFF
         
-        elif key == ord("."):  # Skip backward
+            # key press logic
+        
+            if key == ord("q"): #quit
+                
+                print("Quitting...")
+                
+                break 
+            
+            elif key == ord(" "): #pause
+                
+                paused = not paused
+            
+            elif key == ord(","):  # Skip backward 
 
-            current_frame = video.get(cv2.CAP_PROP_POS_FRAMES)
+                current_frame = video.get(cv2.CAP_PROP_POS_FRAMES)
+                
+                fps = video.get(cv2.CAP_PROP_FPS)
+                
+                frames_to_skip = int(fps * SKIP_SECONDS)
+                
+                target_frame = max(0, current_frame - frames_to_skip)
+                
+                video.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
             
-            fps = video.get(cv2.CAP_PROP_FPS)
+            elif key == ord("."):  # Skip backward
+
+                current_frame = video.get(cv2.CAP_PROP_POS_FRAMES)
+                
+                fps = video.get(cv2.CAP_PROP_FPS)
+                
+                frames_to_skip = int(fps * SKIP_SECONDS)
+                
+                target_frame = max(0, current_frame + frames_to_skip)
+                
+                video.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+                
+            elif key == ord("["): # decrease speed
+                
+                speed = max(0.5, speed - 0.5)
             
-            frames_to_skip = int(fps * SKIP_SECONDS)
-            
-            target_frame = max(0, current_frame + frames_to_skip)
-            
-            video.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
-            
-        elif key == ord("["): # decrease speed
-            
-            speed = max(0.5, speed - 0.5)
+            elif key == ord("]"): # increase speed
+                
+                speed = min(10, speed + 0.5)
         
-        elif key == ord("]"): # increase speed
-            
-            speed = min(10, speed + 0.5)
+        # release the video
+        
+        video.release()
+        
+        # close the window
+        
+        cv2.destroyAllWindows()
+
+if __name__ == "__main__":
     
-    # release the video
-    
-    video.release()
-    
-    # close the window
-    
-    cv2.destroyAllWindows()
+    app()
