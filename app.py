@@ -34,6 +34,8 @@ def app():
     # set environment variables
 
     os.environ['OPENCV_FFMPEG_READ_ATTEMPTS'] = '150000'
+    os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "video_codec;hevc"
+
 
     # get all the files in the folder
 
@@ -53,7 +55,7 @@ def app():
         
         # open the video
         
-        video = cv2.VideoCapture(path)
+        video = cv2.VideoCapture(path, cv2.CAP_FFMPEG)
         
         # print parent folder and file name
         
@@ -96,7 +98,7 @@ def app():
                     
                     # resize the frame
                     
-                    frame = resize_frame(frame = frame, window_name="fish-behavior-video")
+                    cv2.namedWindow("fish-behavior-video", cv2.WINDOW_NORMAL)
                     
                     # Area selection (bbox)
                     
@@ -111,11 +113,11 @@ def app():
                         cv2.rectangle(frame_copy, pt1, pt2, (0, 255, 0), 2)
                         
                         cv2.putText(frame_copy, f"Playback Speed = {speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                        
-                        cv2.imshow("fish-behavior-video", frame_copy)
-                        
+                                                
                         enter_data(frame=frame, data=data, file=path, deployment_id=deployment_id)
 
+                        cv2.imshow("fish-behavior-video", frame_copy)
+                        
                     else:
                         
                         cv2.putText(frame, f"Playback Speed = {speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)

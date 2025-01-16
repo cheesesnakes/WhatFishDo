@@ -93,9 +93,15 @@ def draw_rectangle(event, x, y, flags, param):
         drawing_state['pt2'] = (x, y)
 
 def get_points():
+    
+    global drawing_state
+    
     return drawing_state['pt1'], drawing_state['pt2']
 
 def clear_points():
+    
+    global drawing_state
+    
     drawing_state['pt1'] = None
     drawing_state['pt2'] = None
 
@@ -140,72 +146,33 @@ def save_to_json(data):
 def enter_data(frame, data, file, deployment_id):
     
     global drawing_state
-    
+
     if drawing_state['pt1'] and drawing_state['pt2'] and not drawing_state['drawing']:
         
-        # Create main window
-        
-        root = tk.Tk()
-        root.title("Fish Data Entry")
-        root.geometry("400x400")
-        
         # Variables
-        
-        species_var = tk.StringVar()
-        group_var = tk.StringVar()
-        size_var = tk.StringVar()
-        remarks_var = tk.StringVar()
-        fish_id = '_'.join([deployment_id, str(len(data)+1)])
-        
-        # Species dropdown
-        
-        ttk.Label(root, text="Species:").pack(pady=5)
-        species_box = ttk.Entry(root, textvariable=species_var)
-        species_box.pack(pady=5)
-        
-        # Group dropdown
-        
-        ttk.Label(root, text="Group:").pack(pady=5)
-        group_box = ttk.Entry(root, textvariable=group_var)
-        group_box.pack(pady=5)
-        
-        # Size class slider
-        ttk.Label(root, text="Size Class (cm):").pack(pady=5)
-        size_classes = ['0-10', '10-20', '20-30', '30-40', '40-50', '50-60', '60-70', '70-80', '80+']
-        size_slider = ttk.Combobox(root, values=size_classes, textvariable=size_var)
-        size_slider.pack(pady=5)
-        
-        # Remarks
-        ttk.Label(root, text="Remarks:").pack(pady=5)
-        remarks_entry = ttk.Entry(root, textvariable=remarks_var)
-        remarks_entry.pack(pady=5)
-        
-        def save_and_close():
-            x1, y1 = drawing_state['pt1']
-            x2, y2 = drawing_state['pt2']
-            
-            data[fish_id] = {
-                'species': species_var.get(),
-                'size_class': size_var.get(),
-                'remarks': remarks_var.get(),
-                'coordinates': (x1, y1, x2, y2),
-                'file': file
-            }
-            
-            save_image(frame, (x1, y1, x2, y2), fish_id)
-            save_to_json(data)
-            clear_points()
-            root.destroy()
-        
-        def cancel():
-            clear_points()
-            root.destroy()
-        
-        # Buttons
-        ttk.Button(root, text="Save", command=save_and_close).pack(pady=10)
-        ttk.Button(root, text="Cancel", command=cancel).pack(pady=5)
-        
-        root.mainloop()
+        fish_id = '_'.join([deployment_id, str(len(data) + 1)])
+
+        # Get user input from the terminal
+        species = input("Enter species: ")
+        group = input("Enter group: ")
+        size_class = input("Enter size class (cm): ")
+        remarks = input("Enter remarks: ")
+
+        x1, y1 = drawing_state['pt1']
+        x2, y2 = drawing_state['pt2']
+
+        data[fish_id] = {
+            'species': species,
+            'size_class': size_class,
+            'remarks': remarks,
+            'coordinates': (x1, y1, x2, y2),
+            'file': file
+        }
+
+        save_image(frame, (x1, y1, x2, y2), fish_id)
+        save_to_json(data)
+        clear_points()
+
 
 # time seek functiono
 
