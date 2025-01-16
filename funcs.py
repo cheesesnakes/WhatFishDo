@@ -219,6 +219,8 @@ def seek(video):
 
 def session():
     
+    start_time = 0
+    
     # prompt user if they want to resume
     
     user = input("Do you want to resume from previous session? (y/n): ")
@@ -237,7 +239,7 @@ def session():
         
             data = json.load(open(f"data.json", "r"))
     
-        return file, data
+        return file, data, start_time
     
     # Load data
     
@@ -251,7 +253,9 @@ def session():
         
         file = list(data.values())[-1]['file']
         
-        return file, data
+        start_time = list(data.values())[-1]['time_in']
+        
+        return file, data, start_time
         
     else:
         
@@ -263,4 +267,4 @@ def session():
         
         file = select_file()
         
-        return file, data
+        return file, data, start_time

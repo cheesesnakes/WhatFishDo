@@ -4,7 +4,7 @@
 # requirements
 
 import os
-import json
+import cv2
 from funcs import session
 from stream import VideoStream
 
@@ -30,7 +30,7 @@ def app():
     
     # start or resume session
     
-    file, data = session()
+    file, data, start_time = session()
     
     # set deployment id
     deployment_id = file.split("/")
@@ -49,10 +49,28 @@ def app():
     # open the video
     
     video = VideoStream(data=data, deployment_id=deployment_id, path=file).start()
-    
+        
     # initialize the read
     
     video.read()
+    
+    if start_time > 0:
+        
+        with video.lock:
+            
+            # clear the queue
+            
+            while not video.Q.empty():
+                
+                video.Q.get()
+            
+            # set  
+            
+            video.stream.set(cv2.CAP_PROP_POS_MSEC, start_time)
+
+            # pause
+            
+            video.paused = True
             
     # initialize the process
     
