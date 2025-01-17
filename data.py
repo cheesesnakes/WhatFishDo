@@ -165,3 +165,98 @@ def time_out(video):
     clear_points()
     
     print(f"Fish {fish_id} has been recorded from {video.data[fish_id]['time_in']} to {time_out}")
+    
+# predator data entry
+
+def predators(video):
+    
+    # load predator data from file, if it exists
+    
+    predators = {}
+    
+    # get deployment id
+    
+    deployment_id = video.deployment_id
+    
+    # make window
+    
+    root = Tk()
+    root.title("Predator Data Entry")
+    root.geometry("400x400")
+    
+    # Variables
+    
+    predator_id = '_'.join(["PRED", deployment_id, str(len(predators) + 1)])
+    time_in = current_time(video.stream)
+    species_var = StringVar()
+    size_var = StringVar()
+    
+    # Species input
+    
+    Label(root, text="Species:").pack(pady=5)
+    Entry(root, textvariable=species_var).pack(pady=5)
+    
+    # Size class input
+    
+    Label(root, text="Size Class (cm):").pack(pady=5)
+    Entry(root, textvariable=size_var).pack(pady=5)
+    
+    def save_and_close():
+        
+        # save data
+        
+        predators[predator_id] = {
+            'species': species_var.get(),
+            'size_class': size_var.get(),
+            'time': time_in
+        }
+        
+        # get and save image
+        
+        frame = video.Q.get()
+        
+        cv2.imwrite(f"predator/{predator_id}.png", frame)
+        
+        # save to json
+        
+        if os.path.exists('predators.json'):
+        
+            with open('predators.json', 'r') as f:
+                
+                existing_data = json.load(f)
+                
+                existing_data.update(predators)
+                
+            with open('predators.json', 'w') as f:
+                
+                json.dump(existing_data, f, indent=4)
+                
+        else:
+            
+            with open('predators.json', 'w') as f:
+            
+                json.dump(predators, f, indent=4)
+        
+        root.destroy()
+        
+    def cancel():
+        
+        root.destroy()
+        
+    # Buttons
+    
+    Button(root, text="Save", command=save_and_close).pack(pady=10)
+    
+    Button(root, text="Cancel", command=cancel).pack(pady=5)
+    
+    root.mainloop()
+    
+    # alert on screen
+    
+    print(f"Predator {predator_id}, species: {species_var.get()}, size: {size_var.get()}cm.")
+    
+    
+        
+    
+    
+    
