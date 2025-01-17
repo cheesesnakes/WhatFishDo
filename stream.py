@@ -2,6 +2,7 @@ from threading import Thread, Lock
 from queue import Queue
 import cv2
 import time
+import numpy as np
 from funcs import draw_rectangle, get_points, seek
 from data import enter_data, time_out, predators
 
@@ -22,11 +23,35 @@ class VideoStream:
         self.Q = Queue(maxsize=queue_size)
         self.width = int(self.stream.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.useGPU = True
         
         if not self.stream.isOpened():
             print(f"Error: Unable to open video file {path}")
+    
 
     def start(self):
+        
+        # load model
+        
+        # load the yolo model (https://github.com/tamim662/YOLO-Fish/tree/main)
+        
+        self.net = cv2.dnn.readNetFromDarknet('model.cfg', 'model.weights')
+        
+        if self.useGPU: # run on GPU
+            
+            # Set the backend and target to CUDA
+            self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+            self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+
+        # get the output layer names
+        
+        self.layer_names = self.net.getLayerNames()
+        
+        self.output_layers = [self.layer_names[i - 1] for i in self.net.getUnconnectedOutLayers()]
+        
+        # get the class labels
+        
+        self.model_classes = ["Fish"]
         
         # Create and track threads
         read_thread = Thread(target=self.read, daemon=True)
@@ -65,6 +90,64 @@ class VideoStream:
                         
                         return
                     
+                    # get the height and width of the frame
+        
+                    height, width, channels = frame.shape
+                    
+                    # create a blob from the frame
+                    
+                    blob = cv2.dnn.blobFromImage(frame, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
+                    
+                    # set the input
+                    
+                    self.net.setInput(blob)
+                    
+                    # get the output
+                    
+                    outs = self.net.forward(self.output_layers)
+                    
+                    # loop through the detections
+                    
+                    for out in outs:
+                        
+                        for detection in out:
+                            
+                            scores = detection[5:]
+                            
+                            class_id = np.argmax(scores)
+                            
+                            confidence = scores[class_id]
+                            
+                            if confidence > 0.5:
+                                
+                                # get the center and dimensions of the box
+                                
+                                center_x = int(detection[0] * width)
+                                
+                                center_y = int(detection[1] * height)
+                                
+                                w = int(detection[2] * width)
+                                
+                                h = int(detection[3] * height)
+                                
+                                # get the top left corner
+                                
+                                x = int(center_x - w / 2)
+                                
+                                y = int(center_y - h / 2)
+                                
+                                # draw the box
+                                
+                                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                                
+                                # get the label
+                                
+                                label = f"{self.model_classes[class_id]}: {confidence:.2f}"
+                                
+                                # put the label
+                                
+                                cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                                
                     self.Q.put(frame)
                 
             else:
@@ -129,6 +212,7 @@ class VideoStream:
                         cv2.putText(frame, 
                         f"{self.data[fish_id]['species']} has been recorded from {round(self.data[fish_id]['time_in'], 2)} to {round(self.data[fish_id]["time_out"], 2)}", 
                         (self.width - 2000, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (50, 10, 10), 4)
+                    
                     
                     cv2.imshow(window_name, frame)                 
             
@@ -209,6 +293,11 @@ class VideoStream:
         elif key == ord("t"): # seek
             
             with self.lock:
+
+                # Clear queue
+                while not self.Q.empty():
+            
+                    self.Q.get()
                 
                 seek(self)
                 
@@ -220,25 +309,14 @@ class VideoStream:
             
             predators(self)
     
-    def seek(self, seconds):
-            
-        with self.lock:
+    def detect(frame, useGPU=True):
+                
         
-            # Clear queue
-            while not self.Q.empty():
             
-                self.Q.get()
         
-            current_frame = self.stream.get(cv2.CAP_PROP_POS_FRAMES)
-            
-            fps = self.stream.get(cv2.CAP_PROP_FPS)
-            
-            frames_to_skip = int(fps * seconds)
-            
-            target_frame = current_frame + frames_to_skip
-            
-            self.stream.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
-                            
+        
+        return frame            
+                                
     def stop(self):
         
         # set stop state
