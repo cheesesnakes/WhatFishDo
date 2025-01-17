@@ -2,6 +2,7 @@ import cv2
 import json
 import os
 from funcs import drawing_state, clear_points, current_time
+from tkinter import Tk, simpledialog
 
 # save the image within the rectangle
 
@@ -51,54 +52,73 @@ def save_to_json(data):
 
 # enter data on fish individuals
 
+from tkinter import Tk, Label, Entry, Button, StringVar
+
 def enter_data(frame, video, data, file, deployment_id):
-    
     global drawing_state
 
     if drawing_state['pt1'] and drawing_state['pt2'] and not drawing_state['drawing']:
-        
-        # prompt user if they want to enter data
-        
-        user = input("Do you want to enter data for this fish? (y/n): ")
-        
-        if user.lower() != 'y':
-            
-            clear_points()
-            
-            return False
-        
+        root = Tk()
+        root.title("Fish Data Entry")
+        root.geometry("400x400")
+
         # Variables
         fish_id = '_'.join([deployment_id, str(len(data) + 1)])
-
-        # time in
-        
         time_in = current_time(video)
+        species_var = StringVar()
+        group_var = StringVar()
+        size_var = StringVar()
+        remarks_var = StringVar()
+
+        # Species input
+        Label(root, text="Species:").pack(pady=5)
+        Entry(root, textvariable=species_var).pack(pady=5)
+
+        # Group input
+        Label(root, text="Group:").pack(pady=5)
+        Entry(root, textvariable=group_var).pack(pady=5)
+
+        # Size class input
+        Label(root, text="Size Class (cm):").pack(pady=5)
+        Entry(root, textvariable=size_var).pack(pady=5)
+
+        # Remarks input
+        Label(root, text="Remarks:").pack(pady=5)
+        Entry(root, textvariable=remarks_var).pack(pady=5)
+
+        def save_and_close():
+            x1, y1 = drawing_state['pt1']
+            x2, y2 = drawing_state['pt2']
+
+            data[fish_id] = {
+                'species': species_var.get(),
+                'group': group_var.get(),
+                'size_class': size_var.get(),
+                'remarks': remarks_var.get(),
+                'coordinates': (x1, y1, x2, y2),
+                'file': file,
+                'time_in': time_in,
+                'time_out': 0
+            }
+
+            save_image(frame, (x1, y1, x2, y2), fish_id)
+            save_to_json(data)
+            clear_points()
+            root.destroy()
+
+        def cancel():
+            clear_points()
+            root.destroy()
+
+        # Buttons
+        Button(root, text="Save", command=save_and_close).pack(pady=10)
+        Button(root, text="Cancel", command=cancel).pack(pady=5)
+
+        root.mainloop()
         
-        # Get user input from the terminal
-        species = input("Enter species: ")
-        group = input("Enter group: ")
-        size_class = input("Enter size class (cm): ")
-        remarks = input("Enter remarks: ")
-
-        x1, y1 = drawing_state['pt1']
-        x2, y2 = drawing_state['pt2']
-
-        data[fish_id] = {
-            'species': species,
-            'group': group,
-            'time_in': time_in,
-            'time_out': None,
-            'size_class': size_class,
-            'remarks': remarks,
-            'coordinates': (x1, y1, x2, y2),
-            'file': file
-        }
-
-        save_image(frame, (x1, y1, x2, y2), fish_id)
-        save_to_json(data)
-        clear_points()
+        # alert on screen
         
-        print(f"Observing fish {fish_id}, species: {species}, size: {size_class}cm.")
+        print(f"Observing fish {fish_id}, species: {species_var.get()}, size: {size_var.get()}cm.")
 
 # calculate time the individual has been in the frame
 

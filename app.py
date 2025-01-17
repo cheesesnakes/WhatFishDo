@@ -16,15 +16,24 @@ def app():
     
     # Print instructions and key bindings
     
-    print("Instructions:")
+    print("Key bindings:")
     
-    print("1. Press '[space]' to pause the video")
-    print("2. Press 'q' to quit the video")
-    print("3. Press ',' to skip backward")
-    print("4. Press '.' to skip forward")
-    print("5. Press ']' to increase speed")
-    print("6. Press '[' to decrease speed")
-    print("7. Data and images are saved automatically in the root folder")
+    print("\n")
+    
+    print("Press '[space]' to pause the video")
+    print("Press 'q' to quit the video")
+    print("Press ',' to skip backward")
+    print("Press '.' to skip forward")
+    print("Press ']' to increase speed")
+    print("Press '[' to decrease speed")
+    
+    print("\n")
+    
+    print("Data and images are saved automatically in the root folder")
+    
+    print("\n")
+    
+    print("Click and drag to draw a bounding box around the fish and start an observation")
     
     print("\n")
     

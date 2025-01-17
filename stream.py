@@ -20,7 +20,9 @@ class VideoStream:
         self.lock = Lock()
         self.fps = self.stream.get(cv2.CAP_PROP_FPS)
         self.Q = Queue(maxsize=queue_size)
-
+        self.width = int(self.stream.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.height = int(self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        
         if not self.stream.isOpened():
             print(f"Error: Unable to open video file {path}")
 
@@ -97,9 +99,9 @@ class VideoStream:
                     
                     frame_copy = frame.copy()
                     
-                    cv2.rectangle(frame_copy, pt1, pt2, (0, 255, 0), 2)
+                    cv2.rectangle(frame_copy, pt1, pt2, (255, 0, 0), 2)
                     
-                    cv2.putText(frame_copy, f"Playback Speed = {self.speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    cv2.putText(frame_copy, f"Playback Speed = {self.speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (20, 10, 10), 4)
                     
                     cv2.imshow(window_name, frame_copy)
                     
@@ -109,7 +111,24 @@ class VideoStream:
 
                 else:
                     
-                    cv2.putText(frame, f"Playback Speed = {self.speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    cv2.putText(frame, f"Playback Speed = {self.speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (20,10,10), 4)
+                    
+                    # get the last fish id
+                    
+                    fish_id = list(self.data.keys())[-1]
+                    
+                     # fish alert
+    
+                    if self.data[fish_id]['time_out'] == 0:
+                        
+                        cv2.putText(frame, 
+                            f"Observing Fish {fish_id} - Species: {self.data[fish_id]['species']}, Size: {self.data[fish_id]['size_class']}cm", 
+                            (self.width - 2000, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (50, 10, 10), 4)
+                    else:                
+                        
+                        cv2.putText(frame, 
+                        f"{self.data[fish_id]['species']} has been recorded from {round(self.data[fish_id]['time_in'], 2)} to {round(self.data[fish_id]["time_out"], 2)}", 
+                        (self.width - 2000, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (50, 10, 10), 4)
                     
                     cv2.imshow(window_name, frame)                 
             
