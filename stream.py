@@ -2,7 +2,7 @@ from threading import Thread, Lock
 from queue import Queue
 import cv2
 import time
-from funcs import draw_rectangle, get_points
+from funcs import draw_rectangle, get_points, seek
 from data import enter_data, time_out
 
 class VideoStream:
@@ -208,12 +208,10 @@ class VideoStream:
         
         elif key == ord("t"): # seek
             
-            seek_time = input("Enter time in seconds: ")
-            
-            seek_time = int(seek_time)
-            
-            self.seek(seek_time)
-        
+            with self.lock:
+                
+                seek(self)
+                
         elif key == ord("z"): #time out
             
             time_out(self)
