@@ -254,9 +254,81 @@ def predators(video):
     # alert on screen
     
     print(f"Predator {predator_id}, species: {species_var.get()}, size: {size_var.get()}cm.")
+
+# function to record behavioural data for current fish based on key
+
+behaviors = {
+    '1': 'Feeding',
+    '2': 'Vigilance',
+    '3': 'Moving',
+    '4': 'Bite',
+    '5': 'Predator avoidance',
+    '6': 'Conspecific agression',
+    '7': 'Escape from agression',
+    '8': 'Escape from predator',
+    '9': 'Aggression against predator'
     
+}
+def record_behaviour(video, key):
     
+    global behaviors
+    
+    """
+    Behaviours to record
+    
+    States:
+    
+    1: Feeding
+    2: Vigilance
+    3: Moving
+    
+    Events:
+    
+    4: Bite
+    5: Predato avoidance
+    6: Conspecific agression
+    7: Escape from agression
+    8: Escape from 
+    9: Aggression against predator
+    
+    """
+    
+    # get the last fish id
+    
+    fish_id = list(video.data.keys())[-1]
+    
+    # get the current time
+    
+    time = current_time(video.stream)
+    
+    # get the current behaviour
+    
+    bhv = behaviors[key]
+    
+    behaviour = {
+        'time': time,
+        'behaviour': bhv
+    }
+    
+    # update the data
+    
+    if 'behaviour' in video.data[fish_id]:
         
+        video.data[fish_id]['behaviour'].append(behaviour)
+        
+    else:
+        
+        video.data[fish_id]['behaviour'] = [behaviour]
+        
+    # save to json
     
+    save_to_json(video.data)
+    
+    # alert on screen
+    
+    print(f"Fish {fish_id} has been recorded to be {bhv} at {time}")
+
+    
+      
     
     
