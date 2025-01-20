@@ -67,6 +67,8 @@ class VideoStream:
         
     def read(self):
         
+        frame_count = 0
+        
         while True:
             
             if self.stopped:
@@ -90,64 +92,80 @@ class VideoStream:
                         
                         return
                     
-                    # get the height and width of the frame
-        
-                    height, width, channels = frame.shape
-                    
-                    # create a blob from the frame
-                    
-                    blob = cv2.dnn.blobFromImage(frame, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
-                    
-                    # set the input
-                    
-                    self.net.setInput(blob)
-                    
-                    # get the output
-                    
-                    outs = self.net.forward(self.output_layers)
-                    
-                    # loop through the detections
-                    
-                    for out in outs:
+                    if frame_count < 24:
                         
-                        for detection in out:
+                        frame_count += 1
+                    
+                    else:
+                        
+                        # get the height and width of the frame
+            
+                        height, width, channels = frame.shape
+                        
+                        # create a blob from the frame
+                        
+                        blob = cv2.dnn.blobFromImage(frame, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
+                        
+                        # set the input
+                        
+                        self.net.setInput(blob)
+                        
+                        # get the output
+                        
+                        outs = self.net.forward(self.output_layers)
+                        
+                        # get number of fish so far
+                        
+                        fish_count = len(self.data)
+                        
+                        # loop through the detections
+                        
+                        for out in outs:
                             
-                            scores = detection[5:]
-                            
-                            class_id = np.argmax(scores)
-                            
-                            confidence = scores[class_id]
-                            
-                            if confidence > 0.5:
+                            for detection in out:
                                 
-                                # get the center and dimensions of the box
+                                scores = detection[5:]
                                 
-                                center_x = int(detection[0] * width)
+                                class_id = np.argmax(scores)
                                 
-                                center_y = int(detection[1] * height)
+                                confidence = scores[class_id]
                                 
-                                w = int(detection[2] * width)
-                                
-                                h = int(detection[3] * height)
-                                
-                                # get the top left corner
-                                
-                                x = int(center_x - w / 2)
-                                
-                                y = int(center_y - h / 2)
-                                
-                                # draw the box
-                                
-                                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                                
-                                # get the label
-                                
-                                label = f"{self.model_classes[class_id]}: {confidence:.2f}"
-                                
-                                # put the label
-                                
-                                cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                                
+                                if confidence > 0.5:
+                                    
+                                    # get the center and dimensions of the box
+                                    
+                                    center_x = int(detection[0] * width)
+                                    
+                                    center_y = int(detection[1] * height)
+                                    
+                                    w = int(detection[2] * width)
+                                    
+                                    h = int(detection[3] * height)
+                                    
+                                    # get the top left corner
+                                    
+                                    x = int(center_x - w / 2)
+                                    
+                                    y = int(center_y - h / 2)
+                                    
+                                    # draw the box
+                                    
+                                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                                    
+                                    # suggested fish count
+                                    
+                                    fish_count = fish_count + 1
+                                    
+                                    # get the label
+                                    
+                                    label = f"{self.model_classes[class_id]}: {fish_count}"
+                                    
+                                    # put the label
+                                    
+                                    cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+                                    frame_count = 0
+                                    
                     self.Q.put(frame)
                 
             else:
