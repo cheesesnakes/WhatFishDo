@@ -2,10 +2,11 @@ from threading import Thread, Lock
 from queue import Queue
 import cv2
 import time
-import numpy as np
 from funcs import draw_rectangle, get_points, seek
 from data import enter_data, time_out, predators
 from detect import load_model, detect_fish, draw_fish
+import sys
+import itertools
 
 class VideoStream:
     
@@ -53,7 +54,8 @@ class VideoStream:
             
             if self.stopped:
                 
-                print("Stopped reads")
+                sys.stdout.write("Stopped reads\n")
+                sys.stdout.flush()
                 
                 return
             
@@ -81,7 +83,8 @@ class VideoStream:
                 
                 time.sleep(10)
                 
-                print("Queue is full")
+                sys.stdout.write("\rQueue full")
+                sys.stdout.flush()
                 
                 continue
     
@@ -100,15 +103,17 @@ class VideoStream:
             frame = draw_fish(self, frame, boxes, confidences)
             
             return frame
-        
-    
+            
     def process(self, window_name="fish-behavior-video"):
 
-        buff = 0
+        spinner = itertools.cycle(['|', '/', '-', '\\'])
+        pause_indicator = itertools.cycle(['|', '||'])
         
         while not self.stopped:
             
             if not self.Q.empty() and self.Q.qsize() > 50 and not self.paused:
+                
+                sys.stdout.write('\rPlaying   ' + next(spinner))
                 
                 # get frame from the queue
                 
@@ -161,8 +166,6 @@ class VideoStream:
                     cv2.imshow(window_name, frame)                 
             
                 self.key_event()
-                
-                buff = 0
                  
             else:
                 
@@ -170,31 +173,43 @@ class VideoStream:
                     
                     while self.paused:
                         
-                        time.sleep(0.1)
+                        sys.stdout.write('Paused ' + next(pause_indicator) + ' ' * 10)
+                        
+                        sys.stdout.flush()
+                        
+                        time.sleep(0.2)
+                        
+                        sys.stdout.write('\r')
                         
                         self.key_event()
                         
                     continue
                 
-                if not buff:
-                        
-                    print("Buffering...")
-                    
-                    buff = 1
-                    
-                time.sleep(0.2)
+                # spinner
+                
+                sys.stdout.write('Buffering ' + next(spinner))
+                
+                sys.stdout.flush()
+                
+                time.sleep(0.1)
+                
+                sys.stdout.write('\r')
                 
                 continue
         
         if self.stopped:
     
-            print("Stopped processing")
+            sys.stdout.write("Stopped processing")
+            
+            sys.stdout.flush()
             
             return
             
         else:
             
-            print("Something went wrong")
+            sys.stdout.write("Something went wrong")
+            
+            sys.stdout.flush()
             
             exit(1)
     
@@ -208,21 +223,14 @@ class VideoStream:
     
         if key == ord("q"): #quit
             
-            print("Quitting...")
+            sys.stdout.write("\rQuitting...\n")
+            sys.stdout.flush()
             
             self.stop()
             
         elif key == ord(" "): #pause
             
             self.paused = not self.paused
-            
-            if self.paused:
-                
-                print("Paused")
-            
-            else:
-                
-                print("Resumed")
         
         elif key == ord(","):  # Skip backward 
 
@@ -276,10 +284,7 @@ class VideoStream:
         while not self.Q.empty():
             
             self.Q.get()
-        
-        self.read_thread.join()
-        self.detect_thread.join()
-        
+                
         print("Queue cleared")
                 
         return 

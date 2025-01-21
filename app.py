@@ -9,7 +9,9 @@ from funcs import session
 from stream import VideoStream
 
 def app():
-
+    
+    os.system('clear')
+        
     # welcome message
     
     print("Fish Behavior Video Annotation Tool v0.01")
@@ -77,7 +79,7 @@ def app():
     
     video.process()
     
-    print("Done")
+    print("\nDone")
             
 if __name__ == "__main__":
     

@@ -4,7 +4,7 @@ import cv2
 from tkinter import filedialog, Tk, ttk, DoubleVar
 import json
 import os
-
+import sys
 
 # dialog for selecting folder
 
@@ -186,7 +186,10 @@ def session():
     
     if user.lower() != 'y':
         
-        print("Starting new session. Please select a file.")
+        sys.stdout.write("\r")
+        sys.stdout.flush()
+        
+        print("Starting new session. Please select a file.\n")
         
         file = select_file()
         
@@ -204,25 +207,31 @@ def session():
     
     if os.path.exists('data.json'):
         
+        sys.stdout.write("\r")
+        sys.stdout.flush()
+
         data = json.load(open('data.json', 'r'))
         
-        print(f"Resumed from previous session. {len(data)} fish data loaded.")
-        
-        print(f"The last fish encountered was {list(data.keys())[-1]} at 'seconds'")
-        
+        print(f"\nResumed from previous session. {len(data)} fish data loaded.\n")    
+            
         file = list(data.values())[-1]['file']
         
         start_time = list(data.values())[-1]['time_in']
         
+        print(f"The last fish encountered was at {round(start_time, 2)} seconds\n")
+
         return file, data, start_time
         
     else:
         
+        sys.stdout.write("\r")
+        sys.stdout.flush()
+        
         data = {}
 
-        print("No previous data found. Starting new session.")
+        print("No previous data found. Starting new session. \n")
         
-        print("Please select a file.")
+        print("Please select a file. \n")
         
         file = select_file()
         
