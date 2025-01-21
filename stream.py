@@ -5,6 +5,7 @@ import time
 import numpy as np
 from funcs import draw_rectangle, get_points, seek
 from data import enter_data, time_out, predators
+from detect import load_model, detect_fish, draw_fish
 
 class VideoStream:
     
@@ -33,35 +34,15 @@ class VideoStream:
         
         # load model
         
-        # load the yolo model (https://github.com/tamim662/YOLO-Fish/tree/main)
-        
-        self.net = cv2.dnn.readNetFromDarknet('model.cfg', 'model.weights')
-        
-        if self.useGPU: # run on GPU
-            
-            # Set the backend and target to CUDA
-            self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-            self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
-
-        # get the output layer names
-        
-        self.layer_names = self.net.getLayerNames()
-        
-        self.output_layers = [self.layer_names[i - 1] for i in self.net.getUnconnectedOutLayers()]
-        
-        # get the class labels
-        
-        self.model_classes = ["Fish"]
+        load_model(self)
         
         # Create and track threads
         read_thread = Thread(target=self.read, daemon=True)
-        process_thread = Thread(target=self.process, daemon=True)
-        
-        self.threads.extend([read_thread, process_thread])
-        
+        detect_thread = Thread(target=self.detect, daemon=True)
+                
         # Start threads
         read_thread.start()
-        process_thread.start()
+        detect_thread.start()
         
         return self
         
@@ -94,88 +75,6 @@ class VideoStream:
                         
                         return
                     
-                        
-                    # get the height and width of the frame
-        
-                    height, width, channels = frame.shape
-                    
-                    # create a blob from the frame
-                    
-                    blob = cv2.dnn.blobFromImage(frame, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
-                    
-                    # set the input
-                    
-                    self.net.setInput(blob)
-                    
-                    # get the output
-                    
-                    outs = self.net.forward(self.output_layers)
-                    
-                    # get number of fish so far
-                    
-                    fish_count = len(self.data)
-                    
-                    # lists for non-max suppression
-                    
-                    boxes = []
-                    confidences = []
-                    class_ids = []
-                    
-                    # loop through the detections
-                    
-                    for out in outs:
-                        
-                        for detection in out:
-                            
-                            scores = detection[5:]
-                            
-                            class_id = np.argmax(scores)
-                            
-                            confidence = scores[class_id]
-                            
-                            if confidence > 0.45:
-                                
-                                # get the center and dimensions of the box
-                                
-                                center_x = int(detection[0] * width)
-                                
-                                center_y = int(detection[1] * height)
-                                
-                                w = int(detection[2] * width)
-                                
-                                h = int(detection[3] * height)
-                                
-                                # get the top left corner
-                                
-                                x = int(center_x - w / 2)
-                                
-                                y = int(center_y - h / 2)
-                                
-                                boxes.append([x, y, w, h])
-                                confidences.append(float(confidence))
-                                class_ids.append(class_id)
-                
-                    # apply non-max suppression
-                    
-                    indices = cv2.dnn.NMSBoxes(boxes, confidences, 0.4, 0.4)
-                    fish_id = fish_count
-                    
-                    for i in indices:   
-
-                        box = boxes[i]
-                        
-                        x, y, w, h = box
-                        
-                        # get the fish id
-                        
-                        fish_id = fish_id + 1
-                        
-                        # draw the box
-                        
-                        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                        label = f"Fish {fish_id}"
-                        cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                        
                     self.Q.put(frame)
                 
             else:
@@ -185,17 +84,36 @@ class VideoStream:
                 print("Queue is full")
                 
                 continue
-
+    
+    def detect(self):
+        
+        with self.lock:
+            
+            frame = self.Q.get()
+            
+            # detect fish
+            
+            boxes, confidences = detect_fish(self, frame)
+            
+            # draw fish
+            
+            frame = draw_fish(self, frame, boxes, confidences)
+            
+            return frame
+        
+    
     def process(self, window_name="fish-behavior-video"):
 
-        while not self.stopped:
+        buff = 0
         
-            if not self.Q.empty() and self.Q.qsize() > 240 and not self.paused:
+        while not self.stopped:
+            
+            if not self.Q.empty() and self.Q.qsize() > 50 and not self.paused:
                 
                 # get frame from the queue
                 
-                frame = self.Q.get()
-                
+                frame = self.detect()
+                                
                 # create window
                 
                 cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
@@ -216,9 +134,7 @@ class VideoStream:
                     
                     cv2.imshow(window_name, frame_copy)
                     
-                    with self.lock:
-                    
-                        enter_data(frame=frame, data=self.data, file=self.path, deployment_id=self.deployment_id, video=self.stream)
+                    enter_data(frame=frame, data=self.data, file=self.path, deployment_id=self.deployment_id, video=self.stream)
 
                 else:
                     
@@ -245,7 +161,9 @@ class VideoStream:
                     cv2.imshow(window_name, frame)                 
             
                 self.key_event()
-    
+                
+                buff = 0
+                 
             else:
                 
                 if self.paused:
@@ -258,8 +176,12 @@ class VideoStream:
                         
                     continue
                 
-                print("Buffering...")
-                
+                if not buff:
+                        
+                    print("Buffering...")
+                    
+                    buff = 1
+                    
                 time.sleep(0.2)
                 
                 continue
@@ -354,7 +276,10 @@ class VideoStream:
         while not self.Q.empty():
             
             self.Q.get()
-            
+        
+        self.read_thread.join()
+        self.detect_thread.join()
+        
         print("Queue cleared")
                 
         return 

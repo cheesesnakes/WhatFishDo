@@ -59,10 +59,6 @@ def app():
     
     video = VideoStream(data=data, deployment_id=deployment_id, path=file).start()
         
-    # initialize the read
-    
-    video.read()
-    
     if start_time > 0:
         
         with video.lock:
@@ -77,10 +73,6 @@ def app():
             
             video.stream.set(cv2.CAP_PROP_POS_MSEC, start_time)
 
-            # pause
-            
-            video.paused = True
-            
     # initialize the process
     
     video.process()
