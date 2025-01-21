@@ -8,7 +8,7 @@ from data import enter_data, time_out, predators
 
 class VideoStream:
     
-    def __init__(self, data, deployment_id, path, skip_seconds = 2, queue_size=512):
+    def __init__(self, data, deployment_id, path, skip_seconds = 2, queue_size=1024):
         self.stream = cv2.VideoCapture(path, cv2.CAP_FFMPEG)
         self.data = data
         self.deployment_id = deployment_id
@@ -67,7 +67,6 @@ class VideoStream:
         
     def read(self):
         
-        frame_count = 0
         
         while True:
             
@@ -83,7 +82,10 @@ class VideoStream:
                         
                     ret, frame = self.stream.read()
             
-                    
+                    # resize the frame
+                        
+                    frame = cv2.resize(frame, (int(self.width/2), int(self.height/2)))
+                        
                     if not ret:
 
                         print(f"Error: Unable to read frame from video file {self.path}")
@@ -92,80 +94,88 @@ class VideoStream:
                         
                         return
                     
-                    if frame_count < 24:
                         
-                        frame_count += 1
+                    # get the height and width of the frame
+        
+                    height, width, channels = frame.shape
                     
-                    else:
+                    # create a blob from the frame
+                    
+                    blob = cv2.dnn.blobFromImage(frame, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
+                    
+                    # set the input
+                    
+                    self.net.setInput(blob)
+                    
+                    # get the output
+                    
+                    outs = self.net.forward(self.output_layers)
+                    
+                    # get number of fish so far
+                    
+                    fish_count = len(self.data)
+                    
+                    # lists for non-max suppression
+                    
+                    boxes = []
+                    confidences = []
+                    class_ids = []
+                    
+                    # loop through the detections
+                    
+                    for out in outs:
                         
-                        # get the height and width of the frame
-            
-                        height, width, channels = frame.shape
-                        
-                        # create a blob from the frame
-                        
-                        blob = cv2.dnn.blobFromImage(frame, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
-                        
-                        # set the input
-                        
-                        self.net.setInput(blob)
-                        
-                        # get the output
-                        
-                        outs = self.net.forward(self.output_layers)
-                        
-                        # get number of fish so far
-                        
-                        fish_count = len(self.data)
-                        
-                        # loop through the detections
-                        
-                        for out in outs:
+                        for detection in out:
                             
-                            for detection in out:
+                            scores = detection[5:]
+                            
+                            class_id = np.argmax(scores)
+                            
+                            confidence = scores[class_id]
+                            
+                            if confidence > 0.45:
                                 
-                                scores = detection[5:]
+                                # get the center and dimensions of the box
                                 
-                                class_id = np.argmax(scores)
+                                center_x = int(detection[0] * width)
                                 
-                                confidence = scores[class_id]
+                                center_y = int(detection[1] * height)
                                 
-                                if confidence > 0.5:
-                                    
-                                    # get the center and dimensions of the box
-                                    
-                                    center_x = int(detection[0] * width)
-                                    
-                                    center_y = int(detection[1] * height)
-                                    
-                                    w = int(detection[2] * width)
-                                    
-                                    h = int(detection[3] * height)
-                                    
-                                    # get the top left corner
-                                    
-                                    x = int(center_x - w / 2)
-                                    
-                                    y = int(center_y - h / 2)
-                                    
-                                    # draw the box
-                                    
-                                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                                    
-                                    # suggested fish count
-                                    
-                                    fish_count = fish_count + 1
-                                    
-                                    # get the label
-                                    
-                                    label = f"{self.model_classes[class_id]}: {fish_count}"
-                                    
-                                    # put the label
-                                    
-                                    cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                                w = int(detection[2] * width)
+                                
+                                h = int(detection[3] * height)
+                                
+                                # get the top left corner
+                                
+                                x = int(center_x - w / 2)
+                                
+                                y = int(center_y - h / 2)
+                                
+                                boxes.append([x, y, w, h])
+                                confidences.append(float(confidence))
+                                class_ids.append(class_id)
+                
+                    # apply non-max suppression
+                    
+                    indices = cv2.dnn.NMSBoxes(boxes, confidences, 0.4, 0.4)
+                    fish_id = fish_count
+                    
+                    for i in indices:   
 
-                                    frame_count = 0
-                                    
+                        box = boxes[i]
+                        
+                        x, y, w, h = box
+                        
+                        # get the fish id
+                        
+                        fish_id = fish_id + 1
+                        
+                        # draw the box
+                        
+                        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                        label = f"Fish {fish_id}"
+                        cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                        
                     self.Q.put(frame)
                 
             else:
@@ -180,7 +190,7 @@ class VideoStream:
 
         while not self.stopped:
         
-            if not self.Q.empty() and not self.paused:
+            if not self.Q.empty() and self.Q.qsize() > 240 and not self.paused:
                 
                 # get frame from the queue
                 
@@ -188,8 +198,8 @@ class VideoStream:
                 
                 # create window
                 
-                cv2.namedWindow("fish-behavior-video", cv2.WINDOW_NORMAL)
-        
+                cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+                
                 # Area selection (bbox)
                 
                 cv2.setMouseCallback(window_name, draw_rectangle)
@@ -326,15 +336,7 @@ class VideoStream:
         elif key == ord("p"): # predators
             
             predators(self)
-    
-    def detect(frame, useGPU=True):
-                
-        
-            
-        
-        
-        return frame            
-                                
+                                    
     def stop(self):
         
         # set stop state
