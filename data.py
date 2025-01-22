@@ -18,7 +18,7 @@ def save_image(frame, coordinates, fish_id):
     
     cv2.imwrite(f"fish_images/{fish_id}.png", fish_image)
     
-    print(f"Image saved successfully as fish_images/{fish_id}.png")
+    print(f"\nImage saved successfully as fish_images/{fish_id}.png")
 
 # save data to json
 
@@ -48,7 +48,7 @@ def save_to_json(data):
         
     except Exception as e:
         
-        print(f"Error saving to JSON: {e}")
+        print(f"\nError saving to JSON: {e}")
 
 # enter data on fish individuals
 
@@ -118,7 +118,7 @@ def enter_data(frame, video, data, file, deployment_id):
         
         # alert on screen
         
-        print(f"Observing fish {fish_id}, species: {species_var.get()}, size: {size_var.get()}cm.")
+        print(f"\nObserving fish {fish_id}, species: {species_var.get()}, size: {size_var.get()}cm.\n")
 
 # calculate time the individual has been in the frame
 
@@ -164,7 +164,7 @@ def time_out(video):
     
     clear_points()
     
-    print(f"Fish {fish_id} has been recorded from {video.data[fish_id]['time_in']} to {time_out}")
+    print(f"\nFish {fish_id} has been recorded from {round(video.data[fish_id]['time_in'], 2)} to {round(time_out, 2)}\n")
     
 # predator data entry
 
@@ -253,22 +253,9 @@ def predators(video):
     
     # alert on screen
     
-    print(f"Predator {predator_id}, species: {species_var.get()}, size: {size_var.get()}cm.")
-
-# function to record behavioural data for current fish based on key
-
-behaviors = {
-    '1': 'Feeding',
-    '2': 'Vigilance',
-    '3': 'Moving',
-    '4': 'Bite',
-    '5': 'Predator avoidance',
-    '6': 'Conspecific agression',
-    '7': 'Escape from agression',
-    '8': 'Escape from predator',
-    '9': 'Aggression against predator'
+    print(f"\nPredator {predator_id}, species: {species_var.get()}, size: {size_var.get()}cm.\n")
     
-}
+
 def record_behaviour(video, key):
     
     global behaviors

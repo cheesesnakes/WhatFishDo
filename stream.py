@@ -3,11 +3,14 @@ from queue import Queue
 import cv2
 import time
 from funcs import draw_rectangle, get_points, seek
-from data import enter_data, time_out, predators, record_behaviour  
+from data import enter_data, time_out, predators
+from detect import load_model, detect_fish, draw_fish, track_fish
+import sys
+import itertools
 
 class VideoStream:
     
-    def __init__(self, data, deployment_id, path, skip_seconds = 2, queue_size=512):
+    def __init__(self, data, deployment_id, path, detection, tracking, useGPU, skip_seconds = 2, queue_size=1024):
         self.stream = cv2.VideoCapture(path, cv2.CAP_FFMPEG)
         self.data = data
         self.deployment_id = deployment_id
@@ -22,31 +25,45 @@ class VideoStream:
         self.Q = Queue(maxsize=queue_size)
         self.width = int(self.stream.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.trackers = []
+        
+        # switches
+        
+        self.detection = detection
+        self.tracking = tracking
+        self.useGPU = useGPU
         
         if not self.stream.isOpened():
             print(f"Error: Unable to open video file {path}")
+    
 
     def start(self):
         
         # Create and track threads
         read_thread = Thread(target=self.read, daemon=True)
-        process_thread = Thread(target=self.process, daemon=True)
-        
-        self.threads.extend([read_thread, process_thread])
-        
-        # Start threads
         read_thread.start()
-        process_thread.start()
+        
+        if self.detection:
+            
+            # load model
+        
+            load_model(self)
+        
+            detect_thread = Thread(target=self.detect, daemon=True)
+            
+            detect_thread.start()
         
         return self
         
     def read(self):
         
+        
         while True:
             
             if self.stopped:
                 
-                print("Stopped reads")
+                sys.stdout.write("Stopped reads\n")
+                sys.stdout.flush()
                 
                 return
             
@@ -56,7 +73,10 @@ class VideoStream:
                         
                     ret, frame = self.stream.read()
             
-                    
+                    # resize the frame
+                        
+                    frame = cv2.resize(frame, (int(self.width/2), int(self.height/2)))
+                        
                     if not ret:
 
                         print(f"Error: Unable to read frame from video file {self.path}")
@@ -71,24 +91,58 @@ class VideoStream:
                 
                 time.sleep(10)
                 
-                print("Queue is full")
+                sys.stdout.write("\rQueue full")
+                sys.stdout.flush()
                 
                 continue
-
+    
+    def detect(self):
+        
+        with self.lock:
+            
+            frame = self.Q.get()
+            
+            # detect fish
+            
+            boxes, confidences = detect_fish(self, frame)
+            
+            # draw fish
+            
+            if self.tracking:
+                        
+                frame = track_fish(self, frame, boxes, confidences)
+            
+            else:
+                
+                frame = draw_fish(self, frame, boxes, confidences)
+                
+            return frame
+            
     def process(self, window_name="fish-behavior-video"):
 
-        while not self.stopped:
+        spinner = itertools.cycle(['|', '/', '-', '\\'])
+        pause_indicator = itertools.cycle(['|', '||'])
         
-            if not self.Q.empty() and not self.paused:
+        while not self.stopped:
+            
+            if not self.Q.empty() and self.Q.qsize() > 50 and not self.paused:
+                
+                sys.stdout.write('\rPlaying   ' + next(spinner))
                 
                 # get frame from the queue
                 
-                frame = self.Q.get()
-                
+                if self.detection:
+    
+                    frame = self.detect()
+                    
+                else:
+                    
+                    frame = self.Q.get()
+                                
                 # create window
                 
-                cv2.namedWindow("fish-behavior-video", cv2.WINDOW_NORMAL)
-        
+                cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+                
                 # Area selection (bbox)
                 
                 cv2.setMouseCallback(window_name, draw_rectangle)
@@ -105,9 +159,7 @@ class VideoStream:
                     
                     cv2.imshow(window_name, frame_copy)
                     
-                    with self.lock:
-                    
-                        enter_data(frame=frame, data=self.data, file=self.path, deployment_id=self.deployment_id, video=self.stream)
+                    enter_data(frame=frame, data=self.data, file=self.path, deployment_id=self.deployment_id, video=self.stream)
 
                 else:
                     
@@ -130,37 +182,54 @@ class VideoStream:
                         f"{self.data[fish_id]['species']} has been recorded from {round(self.data[fish_id]['time_in'], 2)} to {round(self.data[fish_id]["time_out"], 2)}", 
                         (self.width - 2000, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (50, 10, 10), 4)
                     
+                    
                     cv2.imshow(window_name, frame)                 
             
                 self.key_event()
-    
+                 
             else:
                 
                 if self.paused:
                     
                     while self.paused:
                         
-                        time.sleep(0.1)
+                        sys.stdout.write('Paused ' + next(pause_indicator) + ' ' * 10)
+                        
+                        sys.stdout.flush()
+                        
+                        time.sleep(0.2)
+                        
+                        sys.stdout.write('\r')
                         
                         self.key_event()
                         
                     continue
                 
-                print("Buffering...")
+                # spinner
                 
-                time.sleep(0.2)
+                sys.stdout.write('\rBuffering ' + next(spinner))
+                
+                sys.stdout.flush()
+                
+                time.sleep(0.1)
+                
+                sys.stdout.write('\r')
                 
                 continue
         
         if self.stopped:
     
-            print("Stopped processing")
+            sys.stdout.write("Stopped processing")
+            
+            sys.stdout.flush()
             
             return
             
         else:
             
-            print("Something went wrong")
+            sys.stdout.write("Something went wrong")
+            
+            sys.stdout.flush()
             
             exit(1)
     
@@ -174,21 +243,14 @@ class VideoStream:
     
         if key == ord("q"): #quit
             
-            print("Quitting...")
+            sys.stdout.write("\rQuitting...\n")
+            sys.stdout.flush()
             
             self.stop()
             
         elif key == ord(" "): #pause
             
             self.paused = not self.paused
-            
-            if self.paused:
-                
-                print("Paused")
-            
-            else:
-                
-                print("Resumed")
         
         elif key == ord(","):  # Skip backward 
 
@@ -209,6 +271,11 @@ class VideoStream:
         elif key == ord("t"): # seek
             
             with self.lock:
+
+                # Clear queue
+                while not self.Q.empty():
+            
+                    self.Q.get()
                 
                 seek(self)
                 
@@ -219,33 +286,7 @@ class VideoStream:
         elif key == ord("p"): # predators
             
             predators(self)
-        
-        # record behavior if key 1-9
-        elif key == [ord(str(i)) for i in range(1, 10)]:
-            
-            with self.lock:
-                
-                record_behaviour(self, key)
-    
-    def seek(self, seconds):
-            
-        with self.lock:
-        
-            # Clear queue
-            while not self.Q.empty():
-            
-                self.Q.get()
-        
-            current_frame = self.stream.get(cv2.CAP_PROP_POS_FRAMES)
-            
-            fps = self.stream.get(cv2.CAP_PROP_FPS)
-            
-            frames_to_skip = int(fps * seconds)
-            
-            target_frame = current_frame + frames_to_skip
-            
-            self.stream.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
-                            
+                                    
     def stop(self):
         
         # set stop state
@@ -263,7 +304,7 @@ class VideoStream:
         while not self.Q.empty():
             
             self.Q.get()
-            
+                
         print("Queue cleared")
                 
         return 

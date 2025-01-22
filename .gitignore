@@ -5,5 +5,4 @@ fish_images/
 videos
 predators/
 predator.json
-model.cfg
-model.weights
+model*
