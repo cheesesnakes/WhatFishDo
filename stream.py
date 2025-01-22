@@ -40,19 +40,17 @@ class VideoStream:
 
     def start(self):
         
-        # Create and track threads
-        read_thread = Thread(target=self.read, daemon=True)
-        read_thread.start()
-        
         if self.detection:
             
             # load model
         
             load_model(self)
         
-            detect_thread = Thread(target=self.detect, daemon=True)
-            
-            detect_thread.start()
+        
+        # Create and track threads
+        read_thread = Thread(target=self.read, daemon=True)
+        read_thread.start()
+        
         
         return self
         
@@ -87,6 +85,10 @@ class VideoStream:
                         
                         break
                     
+                    if self.detection:
+                        
+                        frame = self.detect(frame)
+                    
                     self.Q.put(frame)
                 
             else:
@@ -98,28 +100,24 @@ class VideoStream:
                 
                 continue
     
-    def detect(self):
+    def detect(self, frame):
+            
+        # detect fish
         
-        with self.lock:
+        boxes, confidences = detect_fish(self, frame)
+        
+        # draw fish
+        
+        if self.tracking:
+                    
+            frame = track_fish(self, frame, boxes, confidences)
+        
+        else:
             
-            frame = self.Q.get()
+            frame = draw_fish(self, frame, boxes, confidences)
             
-            # detect fish
-            
-            boxes, confidences = detect_fish(self, frame)
-            
-            # draw fish
-            
-            if self.tracking:
-                        
-                frame = track_fish(self, frame, boxes, confidences)
-            
-            else:
-                
-                frame = draw_fish(self, frame, boxes, confidences)
-                
-            return frame
-            
+        return frame
+        
     def process(self, window_name="fish-behavior-video"):
 
         spinner = itertools.cycle(['|', '/', '-', '\\'])
@@ -127,19 +125,13 @@ class VideoStream:
         
         while not self.stopped:
             
-            if not self.Q.empty() and self.Q.qsize() > 50 and not self.paused:
+            if not self.Q.empty() and self.Q.qsize() > 240 and not self.paused:
                 
                 sys.stdout.write('\rPlaying   ' + next(spinner))
                 
                 # get frame from the queue
                 
-                if self.detection:
-    
-                    frame = self.detect()
-                    
-                else:
-                    
-                    frame = self.Q.get()
+                frame = self.Q.get()
                                 
                 # create window
                 
