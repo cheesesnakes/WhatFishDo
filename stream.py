@@ -10,7 +10,7 @@ import itertools
 
 class VideoStream:
     
-    def __init__(self, data, deployment_id, path, skip_seconds = 2, queue_size=1024):
+    def __init__(self, data, deployment_id, path, detection, tracking, useGPU, skip_seconds = 2, queue_size=1024):
         self.stream = cv2.VideoCapture(path, cv2.CAP_FFMPEG)
         self.data = data
         self.deployment_id = deployment_id
@@ -25,8 +25,13 @@ class VideoStream:
         self.Q = Queue(maxsize=queue_size)
         self.width = int(self.stream.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self.useGPU = True
         self.trackers = []
+        
+        # switches
+        
+        self.detection = detection
+        self.tracking = tracking
+        self.useGPU = useGPU
         
         if not self.stream.isOpened():
             print(f"Error: Unable to open video file {path}")
@@ -34,17 +39,19 @@ class VideoStream:
 
     def start(self):
         
-        # load model
-        
-        load_model(self)
-        
         # Create and track threads
         read_thread = Thread(target=self.read, daemon=True)
-        detect_thread = Thread(target=self.detect, daemon=True)
-                
-        # Start threads
         read_thread.start()
-        detect_thread.start()
+        
+        if self.detection:
+            
+            # load model
+        
+            load_model(self)
+        
+            detect_thread = Thread(target=self.detect, daemon=True)
+            
+            detect_thread.start()
         
         return self
         
@@ -101,8 +108,14 @@ class VideoStream:
             
             # draw fish
             
-            frame = track_fish(self, frame, boxes, confidences)
+            if self.tracking:
+                        
+                frame = track_fish(self, frame, boxes, confidences)
             
+            else:
+                
+                frame = draw_fish(self, frame, boxes, confidences)
+                
             return frame
             
     def process(self, window_name="fish-behavior-video"):
@@ -118,7 +131,13 @@ class VideoStream:
                 
                 # get frame from the queue
                 
-                frame = self.detect()
+                if self.detection:
+    
+                    frame = self.detect()
+                    
+                else:
+                    
+                    frame = self.Q.get()
                                 
                 # create window
                 
@@ -188,7 +207,7 @@ class VideoStream:
                 
                 # spinner
                 
-                sys.stdout.write('Buffering ' + next(spinner))
+                sys.stdout.write('\rBuffering ' + next(spinner))
                 
                 sys.stdout.flush()
                 
