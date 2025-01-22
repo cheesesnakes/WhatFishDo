@@ -1,4 +1,4 @@
-# WhatFishDo: A Behavior Annotation Toolfor Videos collected from the field.
+# WhatFishDo: A Behavior Annotation Tool for Videos collected from the field.
 
 ## Overview
 
@@ -27,14 +27,15 @@ WhatFishDo is designed to assist researchers in annotating behavior from video f
     pip install -r requirements.txt
     ```
 
-    **Note for GPU users**: You will need compile OpenCV with CUDA support. Instructions can be found [here](https://gist.github.com/minhhieutruong0705/8f0ec70c400420e0007c15c98510f133). 
+    **Note for GPU users**: You will need to compile OpenCV with CUDA support. Instructions can be found [here](https://gist.github.com/minhhieutruong0705/8f0ec70c400420e0007c15c98510f133). 
 
 3. **Download YOLO model files**:
     - Download config and weights for a pretrained model of your choosing.
     - Place them in the root directory of the project.
     - Rename them to `model.cfg` and `model.weights` respectively. 
     
-    I recommend [YOLO-Fish](https://github.com/tamim662/YOLO-Fish/tree/main) for videos of fish in heterogenous environments.
+    I recommend [YOLO-Fish](https://github.com/tamim662/YOLO-Fish/tree/main) for videos of fish in heterogeneous environments.
+
 ## Usage
 
 ### Command Line Arguments
@@ -46,8 +47,42 @@ WhatFishDo is designed to assist researchers in annotating behavior from video f
 
 ### Running the Tool
 
-To run the tool, use the following command:s
+To run the tool, use the following command:
 
 ```sh
 python app.py
 ```
+
+### Key Bindings
+
+- Press `[space]` to pause the video.
+- Press `q` to quit the video.
+- Press `,` to skip backward.
+- Press `.` to skip forward.
+- Press `]` to increase speed.
+- Press `[` to decrease speed.
+
+### Data and Images
+
+Data and images are saved automatically in the root folder.
+
+### Annotation
+
+Click and drag to draw a bounding box around the fish and start an observation.
+
+## Contributing
+
+1. Fork the repository.
+2. Create a new branch (`git checkout -b feature-branch`).
+3. Commit your changes (`git commit -am 'Add new feature'`).
+4. Push to the branch (`git push origin feature-branch`).
+5. Create a new Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [YOLO-Fish](https://github.com/tamim662/YOLO-Fish/tree/main) for the pretrained model.
+- [OpenCV](https://opencv.org/) for the computer vision library.
