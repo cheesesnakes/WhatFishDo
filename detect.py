@@ -51,43 +51,39 @@ def detect_fish(video, frame):
     
     # lists for non-max suppression
     
-    boxes = []
     confidences = []
     class_ids = []
     
     # loop through the detections
     
     for out in outs:
+        # Vectorize the detection processing
+        scores = out[:, 5:]
+        class_ids = np.argmax(scores, axis=1)
+        confidences = scores[np.arange(len(scores)), class_ids]
         
-        for detection in out:
+        # Filter out weak detections
+        mask = confidences > 0.5
+        confidences = confidences[mask]
+        class_ids = class_ids[mask]
+        detections = out[mask]
+        
+        # create an array of boxes
+        
+        boxes = np.zeros((len(detections), 4))
+        
+        for i, detection in enumerate(detections):
             
-            scores = detection[5:]
+            center_x = int(detection[0] * width)
+            center_y = int(detection[1] * height)
+            w = int(detection[2] * width)
+            h = int(detection[3] * height)
             
-            class_id = np.argmax(scores)
+            x = int(center_x - w / 2)
+            y = int(center_y - h / 2)
             
-            confidence = scores[class_id]
-            
-            if confidence > 0.5:
-                
-                # get the center and dimensions of the box
-                
-                center_x = int(detection[0] * width)
-                
-                center_y = int(detection[1] * height)
-                
-                w = int(detection[2] * width)
-                
-                h = int(detection[3] * height)
-                
-                # get the top left corner
-                
-                x = int(center_x - w / 2)
-                
-                y = int(center_y - h / 2)
-                
-                boxes.append([x, y, w, h])
-                confidences.append(float(confidence))
-
+            boxes[i] = [x, y, w, h]
+    
     return boxes, confidences
 
 # draw boxes after non-max suppression
@@ -101,13 +97,14 @@ def draw_fish(video, frame, boxes, confidences):
     # apply non-max suppression
     
     indices = cv2.dnn.NMSBoxes(boxes, confidences, 0.4, 0.4)
+    
     fish_id = fish_count
     
-    for i in indices:   
-
-        box = boxes[i]
+    boxes = [boxes[i] for i in indices]
+    
+    for i, box in enumerate(boxes):
         
-        x, y, w, h = box
+        x, y, w, h = [int(i) for i in box]
         
         # get the fish id
         
@@ -115,23 +112,23 @@ def draw_fish(video, frame, boxes, confidences):
         
         # draw the box
         
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        #cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), int(2/video.scale))
         label = f"Fish {fish_id}"
-        cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5/video.scale, (0, 255, 0), int(2/video.scale))
         
     return frame
 
 # function to determine intersection of boxes
 
-def iou(box1, box2):
-    x1, y1, w1, h1 = box1
-    x2, y2, w2, h2 = box2
+def iou_vectorized(box, t_boxes):
+    x1, y1, w1, h1 = box
+    x2, y2, w2, h2 = t_boxes[:, 0], t_boxes[:, 1], t_boxes[:, 2], t_boxes[:, 3]
 
-    xi1 = max(x1, x2)
-    yi1 = max(y1, y2)
-    xi2 = min(x1 + w1, x2 + w2)
-    yi2 = min(y1 + h1, y2 + h2)
-    inter_area = max(0, xi2 - xi1) * max(0, yi2 - yi1)
+    xi1 = np.maximum(x1, x2)
+    yi1 = np.maximum(y1, y2)
+    xi2 = np.minimum(x1 + w1, x2 + w2)
+    yi2 = np.minimum(y1 + h1, y2 + h2)
+    inter_area = np.maximum(0, xi2 - xi1) * np.maximum(0, yi2 - yi1)
 
     box1_area = w1 * h1
     box2_area = w2 * h2
@@ -168,60 +165,61 @@ def track_fish(video, frame, boxes, confidences):
                 
                 # draw
                 
-                x, y, w, h = box
+                x, y, w, h = [int(i) for i in box]
                 
                 fish_id += 1
                 
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                #cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), int(2/video.scale))
                 
                 label = f"Fish {fish_id}"
                 
-                cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5/video.scale, (0, 255, 0), int(2/video.scale))
         
-                    
-                
+    # check if any are detected
+    
+    if len(boxes) == 0:
+            
+            return frame
+    
+    # Convert t_boxes to a NumPy array for vectorized operations
+    if len(t_boxes) > 0:
+        t_boxes_np = np.array(t_boxes)
+        # Vectorized check for new fish
+        ious = np.array([iou_vectorized(box, t_boxes_np) for box in boxes])
+        is_tracked = np.max(ious, axis=1) > 0.5
+    else:
+        is_tracked = np.zeros(len(boxes), dtype=bool)
+
+    # Process boxes that are not tracked
+    new_boxes = np.array(boxes)[~is_tracked]
 
     # check for new fish
-    for i, box in enumerate(boxes):
+    for i, box in enumerate(new_boxes):
+
+        x, y, w, h = [int(i) for i in box]
         
-        x, y, w, h = box
-
-        # check if the box is already being tracked
-        is_tracked = False
+        # create a tracker
         
-        for t_box in t_boxes:
-            
-            if iou(box, t_box) > 0.2:  # IoU threshold
-                
-                is_tracked = True
-                
-                break
+        tracker = cv2.TrackerKCF_create()
 
-        if not is_tracked:
-            
-            # create a tracker
-            
-            tracker = cv2.TrackerKCF_create()
+        # initialize the tracker
+        
+        tracker.init(frame, (x, y, w, h))
 
-            # initialize the tracker
-            
-            tracker.init(frame, (x, y, w, h))
+        # add the tracker to the list
+        
+        video.trackers.append(tracker)
 
-            # add the tracker to the list
+        # fish id
+        
+        fish_id += 1
+        
+        # draw the box
+        
+        #cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), int(2/video.scale))
+        
+        label = f"Fish {fish_id}"
             
-            video.trackers.append(tracker)
+        cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5/video.scale, (0, 255, 0), int(2/video.scale))
 
-            # fish id
-            
-            fish_id += 1
-            
-            # draw the box
-            
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            
-            label = f"Fish {fish_id}"
-                
-            cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-    return frame       
-            
+    return frame
