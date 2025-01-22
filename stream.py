@@ -75,7 +75,16 @@ class VideoStream:
                     # resize the frame
                     if self.scale != 1:
                         
-                        frame = cv2.resize(frame, (int(self.width/self.scale), int(self.height/self.scale)))
+                        if self.useGPU:
+                            
+                            gpu_frame = cv2.cuda_GpuMat()
+                            gpu_frame.upload(frame)
+                            gpu_frame = cv2.cuda.resize(gpu_frame, (int(self.width/self.scale), int(self.height/self.scale)))
+                            frame = gpu_frame.download()
+                        
+                        else:
+    
+                            frame = cv2.resize(frame, (int(self.width/self.scale), int(self.height/self.scale)))
                         
                     if not ret:
 
@@ -125,7 +134,7 @@ class VideoStream:
         
         while not self.stopped:
             
-            if not self.Q.empty() and self.Q.qsize() > 240 and not self.paused:
+            if not self.Q.empty() and self.Q.qsize() > 10 and not self.paused:
                 
                 sys.stdout.write('\rPlaying   ' + next(spinner))
                 
@@ -149,7 +158,7 @@ class VideoStream:
                     
                     cv2.rectangle(frame_copy, pt1, pt2, (255, 0, 0), 2)
                     
-                    cv2.putText(frame_copy, f"Playback Speed = {self.speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (20, 10, 10), 4)
+                    cv2.putText(frame_copy, f"Playback Speed = {self.speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1/self.scale, (20, 10, 10), int(4/self.scale))
                     
                     cv2.imshow(window_name, frame_copy)
                     
@@ -157,7 +166,7 @@ class VideoStream:
 
                 else:
                     
-                    cv2.putText(frame, f"Playback Speed = {self.speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (20,10,10), 4)
+                    cv2.putText(frame, f"Playback Speed = {self.speed}x", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1/self.scale, (20,10,10), int(4/self.scale))
                     
                     # get the last fish id
                     
@@ -169,12 +178,12 @@ class VideoStream:
                         
                         cv2.putText(frame, 
                             f"Observing Fish {fish_id} - Species: {self.data[fish_id]['species']}, Size: {self.data[fish_id]['size_class']}cm", 
-                            (self.width - 2000, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (50, 10, 10), 4)
+                            (self.width - 2000, 30), cv2.FONT_HERSHEY_SIMPLEX, 1/self.scale, (50, 10, 10), int(4/self.scale))
                     else:                
                         
                         cv2.putText(frame, 
                         f"{self.data[fish_id]['species']} has been recorded from {round(self.data[fish_id]['time_in'], 2)} to {round(self.data[fish_id]["time_out"], 2)}", 
-                        (self.width - 2000, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (50, 10, 10), 4)
+                        (self.width - 2000, 30), cv2.FONT_HERSHEY_SIMPLEX, 1/self.scale, (50, 10, 10), int(4/self.scale))
                     
                     
                     cv2.imshow(window_name, frame)                 
