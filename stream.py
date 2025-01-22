@@ -4,7 +4,7 @@ import cv2
 import time
 from funcs import draw_rectangle, get_points, seek
 from data import enter_data, time_out, predators
-from detect import load_model, detect_fish, draw_fish
+from detect import load_model, detect_fish, draw_fish, track_fish
 import sys
 import itertools
 
@@ -26,6 +26,7 @@ class VideoStream:
         self.width = int(self.stream.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.useGPU = True
+        self.trackers = []
         
         if not self.stream.isOpened():
             print(f"Error: Unable to open video file {path}")
@@ -100,7 +101,7 @@ class VideoStream:
             
             # draw fish
             
-            frame = draw_fish(self, frame, boxes, confidences)
+            frame = track_fish(self, frame, boxes, confidences)
             
             return frame
             
