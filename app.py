@@ -36,7 +36,7 @@ def help():
     
     print("\n")
     
-def app(detection = False, tracking = False, useGPU = False):
+def app(detection = False, tracking = False, useGPU = False, scale = 2):
     
     os.system('clear')
         
@@ -72,7 +72,7 @@ def app(detection = False, tracking = False, useGPU = False):
     sys.stdout.flush()
     
     video = VideoStream(data=data, deployment_id=deployment_id, path=file, 
-                        useGPU = useGPU, detection=detection, tracking = tracking).start()
+                        useGPU = useGPU, detection=detection, tracking = tracking, scale = scale).start()
     
     sys.stdout.write("\rInitialised.    ")
     sys.stdout.flush()
@@ -117,7 +117,7 @@ if __name__ == "__main__":
     parser.add_argument("-g", "--gpu", help="Run detection model with CUDA.", action="store_true")
     parser.add_argument("-d", "--detect", help="Run with detection model.", action="store_true")
     parser.add_argument("-t", "--track", help="Run with tracking algorythm.", action="store_true")
-    
+    parser.add_argument("-s", "--scale", help="Scale the video by factor.", type=int, default=2)
     
     
     args = parser.parse_args()
@@ -144,4 +144,4 @@ if __name__ == "__main__":
     
     # run
     
-    app(useGPU=useGPU, detection=detection, tracking=tracking)
+    app(useGPU=useGPU, detection=detection, tracking=tracking, scale=args.scale)

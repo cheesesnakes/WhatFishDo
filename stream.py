@@ -10,7 +10,7 @@ import itertools
 
 class VideoStream:
     
-    def __init__(self, data, deployment_id, path, detection, tracking, useGPU, skip_seconds = 2, queue_size=1024):
+    def __init__(self, data, deployment_id, path, detection, tracking, useGPU, skip_seconds = 2, queue_size=1024, scale = 2):
         self.stream = cv2.VideoCapture(path, cv2.CAP_FFMPEG)
         self.data = data
         self.deployment_id = deployment_id
@@ -26,6 +26,7 @@ class VideoStream:
         self.width = int(self.stream.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.trackers = []
+        self.scale = scale
         
         # switches
         
@@ -65,7 +66,7 @@ class VideoStream:
                 sys.stdout.write("Stopped reads\n")
                 sys.stdout.flush()
                 
-                return
+                break
             
             if not self.Q.full():
                 
@@ -74,8 +75,9 @@ class VideoStream:
                     ret, frame = self.stream.read()
             
                     # resize the frame
+                    if self.scale != 1:
                         
-                    frame = cv2.resize(frame, (int(self.width/2), int(self.height/2)))
+                        frame = cv2.resize(frame, (int(self.width/self.scale), int(self.height/self.scale)))
                         
                     if not ret:
 
@@ -83,7 +85,7 @@ class VideoStream:
                         
                         self.stop()
                         
-                        return
+                        break
                     
                     self.Q.put(frame)
                 
