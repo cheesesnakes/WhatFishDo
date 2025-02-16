@@ -183,6 +183,21 @@ def predators(video):
     print(f"\nPredator {predator_id}, species: {species}, size: {size}cm.\n")
 
 
+# record behaviour
+
+behaviors = {
+    "1": "Feeding",
+    "2": "Vigilance",
+    "3": "Moving",
+    "4": "Bite",
+    "5": "Predator avoidance",
+    "6": "Conspecific agression",
+    "7": "Escape from agression",
+    "8": "Escape from predator",
+    "9": "Aggression against predator",
+}
+
+
 def record_behaviour(video, key):
     global behaviors
 
@@ -201,7 +216,7 @@ def record_behaviour(video, key):
     5: Predato avoidance
     6: Conspecific agression
     7: Escape from agression
-    8: Escape from 
+    8: Escape from predator
     9: Aggression against predator
     
     """

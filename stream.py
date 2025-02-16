@@ -3,10 +3,11 @@ from queue import Queue
 import cv2
 import time
 from funcs import draw_rectangle, get_points, seek
-from data import enter_data, time_out, predators
+from data import enter_data, time_out, predators, record_behaviour
 from detect import load_model, detect_fish, draw_fish, track_fish
 import sys
 import itertools
+import re
 
 
 class VideoStream:
@@ -309,6 +310,10 @@ class VideoStream:
 
         elif key == ord("p"):  # predators
             predators(self)
+
+        # behaviours, number keys
+        elif re.match(r"\d", chr(key)):
+            record_behaviour(self, chr(key))
 
     def stop(self):
         # set stop state
