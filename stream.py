@@ -171,13 +171,14 @@ class VideoStream:
 
                     cv2.imshow(window_name, frame_copy)
 
-                    enter_data(
-                        frame=frame,
-                        data=self.data,
-                        file=self.path,
-                        deployment_id=self.deployment_id,
-                        video=self.stream,
-                    )
+                    with self.lock:
+                        enter_data(
+                            frame=frame,
+                            data=self.data,
+                            file=self.path,
+                            deployment_id=self.deployment_id,
+                            video=self.stream,
+                        )
 
                 else:
                     cv2.putText(

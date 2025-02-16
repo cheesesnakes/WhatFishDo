@@ -2,8 +2,6 @@ import cv2
 import json
 import os
 from funcs import drawing_state, clear_points, current_time
-from tkinter import Tk, Label, Entry, Button, StringVar
-
 # save the image within the rectangle
 
 
@@ -54,69 +52,38 @@ def enter_data(frame, video, data, file, deployment_id):
     global drawing_state
 
     if drawing_state["pt1"] and drawing_state["pt2"] and not drawing_state["drawing"]:
-        root = Tk()
-        root.title("Fish Data Entry")
-        root.geometry("400x400")
-
         # Variables
         fish_id = "_".join([deployment_id, str(len(data) + 1)])
         time_in = current_time(video)
-        species_var = StringVar()
-        group_var = StringVar()
-        size_var = StringVar()
-        remarks_var = StringVar()
+        print(f"\n Time in: {time_in}")
+        species = input("Species: ")
+        group = input("Group: ")
+        size = input("Size Class (cm): ")
+        remarks = input("Remarks: ")
 
-        # Species input
-        Label(root, text="Species:").pack(pady=5)
-        Entry(root, textvariable=species_var).pack(pady=5)
+        # Coordinates
 
-        # Group input
-        Label(root, text="Group:").pack(pady=5)
-        Entry(root, textvariable=group_var).pack(pady=5)
+        x1, y1 = drawing_state["pt1"]
+        x2, y2 = drawing_state["pt2"]
 
-        # Size class input
-        Label(root, text="Size Class (cm):").pack(pady=5)
-        Entry(root, textvariable=size_var).pack(pady=5)
+        data[fish_id] = {
+            "species": species,
+            "group": group,
+            "size_class": size,
+            "remarks": remarks,
+            "coordinates": (x1, y1, x2, y2),
+            "file": file,
+            "time_in": time_in,
+            "time_out": 0,
+        }
 
-        # Remarks input
-        Label(root, text="Remarks:").pack(pady=5)
-        Entry(root, textvariable=remarks_var).pack(pady=5)
-
-        def save_and_close():
-            x1, y1 = drawing_state["pt1"]
-            x2, y2 = drawing_state["pt2"]
-
-            data[fish_id] = {
-                "species": species_var.get(),
-                "group": group_var.get(),
-                "size_class": size_var.get(),
-                "remarks": remarks_var.get(),
-                "coordinates": (x1, y1, x2, y2),
-                "file": file,
-                "time_in": time_in,
-                "time_out": 0,
-            }
-
-            save_image(frame, (x1, y1, x2, y2), fish_id)
-            save_to_json(data)
-            clear_points()
-            root.destroy()
-
-        def cancel():
-            clear_points()
-            root.destroy()
-
-        # Buttons
-        Button(root, text="Save", command=save_and_close).pack(pady=10)
-        Button(root, text="Cancel", command=cancel).pack(pady=5)
-
-        root.mainloop()
+        save_image(frame, (x1, y1, x2, y2), fish_id)
+        save_to_json(data)
+        clear_points()
 
         # alert on screen
 
-        print(
-            f"\nObserving fish {fish_id}, species: {species_var.get()}, size: {size_var.get()}cm.\n"
-        )
+        print(f"\nObserving fish {fish_id}, species: {species}, size: {size}cm.\n")
 
 
 # calculate time the individual has been in the frame
@@ -147,7 +114,7 @@ def time_out(video):
         # clear queue
 
         while not video.Q.empty():
-            video.Q.get()
+            video.Q
 
         # reset frame to time in
 
@@ -180,75 +147,40 @@ def predators(video):
 
     # make window
 
-    root = Tk()
-    root.title("Predator Data Entry")
-    root.geometry("400x400")
-
     # Variables
-
     predator_id = "_".join(["PRED", deployment_id, str(len(predators) + 1)])
     time_in = current_time(video.stream)
-    species_var = StringVar()
-    size_var = StringVar()
+    species = input("\nSpecies: ")
+    size = input("Size Class (cm): ")
 
-    # Species input
+    # Save data
+    predators[predator_id] = {
+        "species": species,
+        "size_class": size,
+        "time": time_in,
+    }
 
-    Label(root, text="Species:").pack(pady=5)
-    Entry(root, textvariable=species_var).pack(pady=5)
+    # Get and save image
+    frame = video.Q
+    cv2.imwrite(f"predator/{predator_id}.png", frame)
 
-    # Size class input
+    # Save to json
+    if os.path.exists("predators.json"):
+        with open("predators.json", "r") as f:
+            existing_data = json.load(f)
+            existing_data.update(predators)
+        with open("predators.json", "w") as f:
+            json.dump(existing_data, f, indent=4)
+    else:
+        with open("predators.json", "w") as f:
+            json.dump(predators, f, indent=4)
 
-    Label(root, text="Size Class (cm):").pack(pady=5)
-    Entry(root, textvariable=size_var).pack(pady=5)
-
-    def save_and_close():
-        # save data
-
-        predators[predator_id] = {
-            "species": species_var.get(),
-            "size_class": size_var.get(),
-            "time": time_in,
-        }
-
-        # get and save image
-
-        frame = video.Q.get()
-
-        cv2.imwrite(f"predator/{predator_id}.png", frame)
-
-        # save to json
-
-        if os.path.exists("predators.json"):
-            with open("predators.json", "r") as f:
-                existing_data = json.load(f)
-
-                existing_data.update(predators)
-
-            with open("predators.json", "w") as f:
-                json.dump(existing_data, f, indent=4)
-
-        else:
-            with open("predators.json", "w") as f:
-                json.dump(predators, f, indent=4)
-
-        root.destroy()
-
-    def cancel():
-        root.destroy()
-
-    # Buttons
-
-    Button(root, text="Save", command=save_and_close).pack(pady=10)
-
-    Button(root, text="Cancel", command=cancel).pack(pady=5)
-
-    root.mainloop()
+    # Alert on screen
+    print(f"\nPredator {predator_id}, species: {species}, size: {size}cm.\n")
 
     # alert on screen
 
-    print(
-        f"\nPredator {predator_id}, species: {species_var.get()}, size: {size_var.get()}cm.\n"
-    )
+    print(f"\nPredator {predator_id}, species: {species}, size: {size}cm.\n")
 
 
 def record_behaviour(video, key):
