@@ -131,20 +131,15 @@ def clear_points():
 
 def current_time(video):
     """Calculate current time in video"""
+    # Get video properties
+    fps = video.get(cv2.CAP_PROP_FPS)
+    current_frame = int(video.get(cv2.CAP_PROP_POS_FRAMES))
+    current_time = current_frame / fps
 
-    try:
-        # Get video properties
+    # Debug prints
+    print(f"Current frame: {current_frame}, FPS: {fps}, Current time: {current_time}")
 
-        fps = video.get(cv2.CAP_PROP_FPS)
-        current_frame = int(video.get(cv2.CAP_PROP_POS_FRAMES))
-        current_time = current_frame / fps
-
-        return current_time
-
-    except Exception as e:
-        print(f"Error calculating current time: {e}")
-
-        return False
+    return current_time
 
 
 # time seek functiono

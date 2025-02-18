@@ -129,31 +129,31 @@ def enter_data(frame, video, data, file, deployment_id):
 def time_out(video):
     """After enter_data is run, continue until click and record time out"""
 
-    # get the last fish id
+    # Get the last fish id
     fish_id = list(video.data.keys())[-1]
 
-    # get the time out
+    # Get the time out
     time_out = current_time(video.stream)
 
-    # update the data
+    # Update the data
     video.data[fish_id]["time_out"] = time_out
 
-    # save to json
+    # Save to json
     save_to_json(video.data)
 
-    # get lock
+    # Get lock
     with video.lock:
-        # clear queue
+        # Clear queue
         while not video.Q.empty():
             video.Q.get()
 
-        # reset frame to time in
+        # Reset frame to time in
         video.stream.set(cv2.CAP_PROP_POS_MSEC, video.data[fish_id]["time_in"])
 
-        # pause
+        # Pause
         video.paused = True
 
-    # clear points
+    # Clear points
     clear_points()
 
     print(
@@ -219,45 +219,25 @@ behaviors = {
 def record_behaviour(video, key):
     global behaviors
 
-    """
-    Behaviours to record
-    
-    States:
-    
-    1: Feeding
-    2: Vigilance
-    3: Moving
-    
-    Events:
-    
-    4: Bite
-    5: Predato avoidance
-    6: Conspecific agression
-    7: Escape from agression
-    8: Escape from predator
-    9: Aggression against predator
-    
-    """
-
-    # get the last fish id
+    # Get the last fish id
     fish_id = list(video.data.keys())[-1]
 
-    # get the current time
+    # Get the current time
     time = current_time(video.stream)
 
-    # get the current behaviour
+    # Get the current behaviour
     bhv = behaviors[key]
 
     behaviour = {"time": time, "behaviour": bhv}
 
-    # update the data
+    # Update the data
     if "behaviour" in video.data[fish_id]:
         video.data[fish_id]["behaviour"].append(behaviour)
     else:
         video.data[fish_id]["behaviour"] = [behaviour]
 
-    # save to json
+    # Save to json
     save_to_json(video.data)
 
-    # alert on screen
+    # Alert on screen
     print(f"Fish {fish_id} has been recorded to be {bhv} at {time}")
