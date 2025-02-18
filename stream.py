@@ -278,6 +278,7 @@ class VideoStream:
             sys.stdout.write("\rQuitting...\n")
             sys.stdout.flush()
 
+            self.paused = False
             self.stop()
 
         elif key == ord(" "):  # pause
