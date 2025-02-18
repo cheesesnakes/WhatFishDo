@@ -174,11 +174,11 @@ class VideoStream:
 
                     with self.lock:
                         enter_data(
-                            frame=frame,
+                            frame=frame_copy,
                             data=self.data,
                             file=self.path,
                             deployment_id=self.deployment_id,
-                            video=self.stream,
+                            video=self,
                         )
 
                 else:
@@ -285,10 +285,20 @@ class VideoStream:
 
         elif key == ord(","):  # Skip backward
             with self.lock:
+                # flush queue
+
+                while not self.Q.empty():
+                    self.Q.get()
+
                 self.skip(-self.skip_seconds)
 
         elif key == ord("."):  # Skip backward
             with self.lock:
+                # flush queue
+
+                while not self.Q.empty():
+                    self.Q.get()
+
                 self.skip(self.skip_seconds)
 
         elif key == ord("["):  # decrease speed
