@@ -11,11 +11,14 @@ from funcs import drawing_state, clear_points, current_time
 def save_image(frame, coordinates, fish_id):
     x1, y1, x2, y2 = coordinates
 
+    # save the image
+    cv2.imwrite(f"fish_images/frames/{fish_id}_frame.png", frame)
+
     # get the fish image
     fish_image = frame[y1:y2, x1:x2]
 
     # save the image
-    cv2.imwrite(f"fish_images/{fish_id}.png", fish_image)
+    cv2.imwrite(f"fish_images/cropped/{fish_id}.png", fish_image)
 
     print(f"\nImage saved successfully as fish_images/{fish_id}.png")
 
@@ -78,7 +81,7 @@ def enter_data(frame, video, data, file, deployment_id):
     if drawing_state["pt1"] and drawing_state["pt2"] and not drawing_state["drawing"]:
         # Variables
         fish_id = "_".join([deployment_id, str(len(data) + 1)])
-        time_in = current_time(video)
+        time_in = current_time(video.stream)
         print(f"\n Fish: {fish_id}, Time in: {time_in}")
 
         root = tk.Tk()
@@ -116,6 +119,8 @@ def enter_data(frame, video, data, file, deployment_id):
         save_to_json(data)
         clear_points()
 
+        video.stream.set(cv2.CAP_PROP_POS_MSEC, time_in)
+        video.paused = True
         # alert on screen
         print(f"\nObserving fish {fish_id}, species: {species}, size: {size}cm.\n")
 
