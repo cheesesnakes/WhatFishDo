@@ -1,7 +1,7 @@
 # requirements
 
 import cv2
-from tkinter import filedialog, Tk, ttk, DoubleVar
+from tkinter import filedialog, Tk, ttk, simpledialog 
 import json
 import os
 import sys
@@ -127,77 +127,41 @@ def clear_points():
 
 # time seek functiono
 
+class seekDialog(simpledialog.Dialog):
+
+    def body(self, master):
+    
+        self.title("Skip to seconds")
+
+        ttk.Label(master, text = "Enter position in seconds:").grid(row = 0)
+
+        self.secondsEntry = ttk.Entry(master)
+
+        self.secondsEntry.grid(row=0, column=1)
+
+        return self.secondsEntry
+
+    def apply(self):
+
+        self.seconds = self.secondsEntry.get()
 
 def seek(video):
-    """Seek to specific time in video"""
 
-    try:
-        # Get video properties
+    root = Tk()
+    root.withdraw()
 
-        fps = video.get(cv2.CAP_PROP_FPS)
-        total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-        duration = total_frames / fps
+    dialog = seekDialog(root)
 
-        # create a window
+    if dialog.seconds is None:
+        root.destroy()
+        return
 
-        root = Tk()
-        root.title("Seek Time")
-        root.geometry("200x200")
+    seconds = int(dialog.seconds)
 
-        # Variables
+    root.destroy()
 
-        time_var = DoubleVar()
-        ttk.Label(root, text=f"Enter time (0-{duration:.1f} seconds):").pack(pady=5)
-        time_box = ttk.Entry(root, textvariable=time_var)
-        time_box.pack(pady=5)
+    video.skip(seconds)
+    
 
-        # Ok and Cancel buttons
 
-        def on_ok():
-            try:
-                target_seconds = int(time_var.get())
-
-                # Calculate target frame
-
-                target_frame = int(target_seconds * fps)
-
-                # Validate target
-
-                if target_frame < 0 or target_frame > total_frames:
-                    print(f"Invalid time. Video duration: {duration:.2f}s")
-
-                    return False
-
-                # Set position
-
-                video.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
-
-                # destroy the window
-
-                root.destroy()
-
-                return True
-
-            except Exception as e:
-                print(f"Error seeking video: {e}")
-
-                root.destroy()
-
-                return False
-
-        def on_cancel():
-            root.destroy()
-
-            return True
-
-        # Buttons
-
-        ttk.Button(root, text="OK", command=on_ok).pack(pady=5)
-        ttk.Button(root, text="Cancel", command=on_cancel).pack(pady=5)
-
-        root.mainloop()
-
-    except Exception as e:
-        print(f"Error seeking video: {e}")
-
-        return False
+    
