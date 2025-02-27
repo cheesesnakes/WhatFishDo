@@ -357,7 +357,7 @@ class VideoStream:
 
         self.stream.set(
             cv2.CAP_PROP_POS_MSEC,
-            self.stream.get(cv2.CAP_PROP_POS_MSEC) + seconds * 1000,
+            self.frame_time + seconds * 1000,
         )
 
         return
