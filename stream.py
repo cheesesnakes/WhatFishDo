@@ -190,7 +190,7 @@ class VideoStream:
                 else:
                     cv2.putText(
                         frame,
-                        f"Playback Speed = {self.speed}x, {round(self.frame_time/1000, 2)}",
+                        f"Playback Speed = {self.speed}x, {int(self.frame_time//(1000*60*60))}:{int((self.frame_time % 36000000)//60000)}:{int((self.frame_time % 36000000) % 60000)/1000}",
                         (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         1 / self.scale,
