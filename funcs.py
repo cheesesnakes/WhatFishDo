@@ -125,23 +125,6 @@ def clear_points():
     drawing_state["pt1"] = None
     drawing_state["pt2"] = None
 
-
-# calculate current time in video
-
-
-def current_time(video):
-    """Calculate current time in video"""
-    # Get video properties
-    fps = video.get(cv2.CAP_PROP_FPS)
-    current_frame = int(video.get(cv2.CAP_PROP_POS_FRAMES))
-    current_time = current_frame / fps
-
-    # Debug prints
-    print(f"Current frame: {current_frame}, FPS: {fps}, Current time: {current_time}")
-
-    return current_time
-
-
 # time seek functiono
 
 

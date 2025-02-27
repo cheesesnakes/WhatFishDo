@@ -4,7 +4,7 @@ import os
 import tkinter as tk
 from tkinter import simpledialog
 from tkinter import ttk
-from funcs import drawing_state, clear_points, current_time
+from funcs import drawing_state, clear_points
 
 
 # save the image within the rectangle
@@ -81,7 +81,7 @@ def enter_data(frame, video, data, file, deployment_id):
     if drawing_state["pt1"] and drawing_state["pt2"] and not drawing_state["drawing"]:
         # Variables
         fish_id = "_".join([deployment_id, str(len(data) + 1)])
-        time_in = current_time(video.stream)
+        time_in = video.frame_time 
         print(f"\n Fish: {fish_id}, Time in: {time_in}")
 
         root = tk.Tk()
@@ -135,7 +135,7 @@ def time_out(video):
     fish_id = list(video.data.keys())[-1]
 
     # Get the time out
-    time_out = current_time(video.stream)
+    time_out = video.frame_time 
 
     # Update the data
     video.data[fish_id]["time_out"] = time_out
@@ -174,7 +174,7 @@ def predators(video):
     # make window
     # Variables
     predator_id = "_".join(["PRED", deployment_id, str(len(predators) + 1)])
-    time_in = current_time(video.stream)
+    time_in = video.frame_time 
     species = input("\nSpecies: ")
     size = input("Size Class (cm): ")
 
@@ -186,7 +186,7 @@ def predators(video):
     }
 
     # Get and save image
-    frame = video.Q
+    frame = video.Q.get()
     cv2.imwrite(f"predator/{predator_id}.png", frame)
 
     # Save to json
@@ -225,7 +225,7 @@ def record_behaviour(video, key):
     fish_id = list(video.data.keys())[-1]
 
     # Get the current time
-    time = current_time(video.stream)
+    time = video.frame_time 
 
     # Get the current behaviour
     bhv = behaviors[key]

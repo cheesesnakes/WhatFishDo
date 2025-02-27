@@ -24,6 +24,7 @@ class VideoStream:
         scale=2,
     ):
         self.stream = cv2.VideoCapture(path, cv2.CAP_FFMPEG)
+        self.frame_time = 0
         self.data = data
         self.deployment_id = deployment_id
         self.path = path
@@ -72,7 +73,9 @@ class VideoStream:
             if not self.Q.full():
                 with self.lock:
                     ret, frame = self.stream.read()
-
+                    
+                    frame_time = self.stream.get(cv2.CAP_PROP_POS_MSEC)
+                    
                     # resize the frame
                     if self.scale != 1:
                         if self.useGPU:
@@ -108,7 +111,7 @@ class VideoStream:
                     if self.detection:
                         frame = self.detect(frame)
 
-                    self.Q.put(frame)
+                    self.Q.put([frame, frame_time])
 
             else:
                 time.sleep(10)
@@ -143,7 +146,7 @@ class VideoStream:
 
                 # get frame from the queue
 
-                frame = self.Q.get()
+                frame, self.frame_time = self.Q.get()
 
                 # create window
 
@@ -187,7 +190,7 @@ class VideoStream:
                 else:
                     cv2.putText(
                         frame,
-                        f"Playback Speed = {self.speed}x",
+                        f"Playback Speed = {self.speed}x, {round(self.frame_time/1000, 2)}",
                         (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         1 / self.scale,
