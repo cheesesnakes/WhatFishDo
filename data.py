@@ -77,7 +77,7 @@ class DataEntryDialog(simpledialog.Dialog):
 # enter data on fish individuals
 def enter_data(frame, video, data, file, deployment_id):
     global drawing_state
-
+    
     if drawing_state["pt1"] and drawing_state["pt2"] and not drawing_state["drawing"]:
         # Variables
         fish_id = "_".join([deployment_id, str(len(data) + 1)])
@@ -91,6 +91,7 @@ def enter_data(frame, video, data, file, deployment_id):
         if dialog.result is None:
             clear_points()
             root.destroy()
+            video.speed = 1
             return
 
         species = dialog.result["species"]
@@ -120,6 +121,7 @@ def enter_data(frame, video, data, file, deployment_id):
         clear_points()
 
         video.stream.set(cv2.CAP_PROP_POS_MSEC, time_in)
+        video.speed = 1
         video.paused = True
         # alert on screen
         print(f"\nObserving fish {fish_id}, species: {species}, size: {size}cm.\n")
