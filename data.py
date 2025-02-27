@@ -164,6 +164,35 @@ def time_out(video):
 
 
 # predator data entry
+
+class predatorDialog(simpledialog.Dialog):
+
+    def body(self, master):
+
+        self.title("Enter Predator Data")
+
+        ttk.Label(master, text="Species").grid(row=0)
+        ttk.Label(master, text="Size Class (cm)").grid(row=1)
+        ttk.Label(master, text="Remarks").grid(row=2)
+
+        self.species_entry = ttk.Entry(master)
+        self.size_entry = ttk.Entry(master)
+        self.remarks_entry = ttk.Entry(master)
+
+        self.species_entry.grid(row=0, column=1)
+        self.size_entry.grid(row=1, column=1)
+        self.remarks_entry.grid(row=2, column=1)
+
+        return self.species_entry
+
+    def apply(self):
+
+        self.result = {
+            "species": self.species_entry.get(),
+            "size_class": self.size_entry.get(),
+            "remarks": self.remarks_entry.get()
+        }
+
 def predators(video):
     # load predator data from file, if it exists
     predators = {}
@@ -175,18 +204,29 @@ def predators(video):
     # Variables
     predator_id = "_".join(["PRED", deployment_id, str(len(predators) + 1)])
     time_in = video.frame_time 
-    species = input("\nSpecies: ")
-    size = input("Size Class (cm): ")
+    
+    root = tk.Tk()
+    root.withdraw()
+
+    dialog = predatorDialog(root)
+    
+    if dialog.result is None:
+        root.destroy()
+        return
 
     # Save data
     predators[predator_id] = {
-        "species": species,
-        "size_class": size,
+        "species": dialog.result["species"],
+        "size_class": dialog.result["size_class"],
         "time": time_in,
+        "remarks": dialog.result["remarks"]
     }
 
+    root.destroy()
+
     # Get and save image
-    frame = video.Q.get()
+    frame, frame_time = video.Q.get()
+    
     cv2.imwrite(f"predator/{predator_id}.png", frame)
 
     # Save to json
@@ -201,7 +241,7 @@ def predators(video):
             json.dump(predators, f, indent=4)
 
     # Alert on screen
-    print(f"\nPredator {predator_id}, species: {species}, size: {size}cm.\n")
+    print(f"\rPredator {predator_id}, species: {dialog.result["species"]}, size: {dialog.result["size_class"]}cm., time: {frame_time}\n")
 
 
 # record behaviour
