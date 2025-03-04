@@ -5,38 +5,10 @@
 
 import os
 import cv2
-from funcs import session
+from funcs import cmdargs, session
 from stream import VideoStream
-import argparse
 import sys
 import time
-
-
-def help():
-    # Print instructions and key bindings
-
-    print("Key bindings:")
-
-    print("\n")
-
-    print("Press '[space]' to pause the video")
-    print("Press 'q' to quit the video")
-    print("Press ',' to skip backward")
-    print("Press '.' to skip forward")
-    print("Press ']' to increase speed")
-    print("Press '[' to decrease speed")
-
-    print("\n")
-
-    print("Data and images are saved automatically in the root folder")
-
-    print("\n")
-
-    print(
-        "Click and drag to draw a bounding box around the fish and start an observation"
-    )
-
-    print("\n")
 
 
 def app(detection=False, tracking=False, useGPU=False, scale=2):
@@ -45,8 +17,6 @@ def app(detection=False, tracking=False, useGPU=False, scale=2):
     # welcome message
 
     print("Fish Behavior Video Annotation Tool v0.1\n")
-
-    help()
 
     print(
         f"Running with detection: {detection}, tracking {tracking}, and GPU:{useGPU}\n"
@@ -118,28 +88,7 @@ def app(detection=False, tracking=False, useGPU=False, scale=2):
 
 
 if __name__ == "__main__":
-    epilog = "Key bindings:\n Press '[space]' to pause the video\n Press 'q' to quit the video\n Press ',' to skip backward\n Press '.' to skip forward\n Press ']' to increase speed\n Press '[' to decrease speed\n\nData and images are saved automatically in the root folder\n\nData collection\nClick and drag to draw a bounding box around the fish and start an observation\nPress 'z' to stop the observation \n Press 'p' to record a predator in frame."
-
-    parser = argparse.ArgumentParser(
-        prog="Fish Behavior Video Annotation Tool v0.1",
-        formatter_class=argparse.RawTextHelpFormatter,
-        epilog=epilog,
-    )
-
-    parser.add_argument(
-        "-g", "--gpu", help="Run detection model with CUDA.", action="store_true"
-    )
-    parser.add_argument(
-        "-d", "--detect", help="Run with detection model.", action="store_true"
-    )
-    parser.add_argument(
-        "-t", "--track", help="Run with tracking algorythm.", action="store_true"
-    )
-    parser.add_argument(
-        "-s", "--scale", help="Scale the video by factor.", type=int, default=2
-    )
-
-    args = parser.parse_args()
+    args = cmdargs()
 
     # set default
 

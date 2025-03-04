@@ -1,10 +1,11 @@
 # requirements
 
 import cv2
-from tkinter import filedialog, Tk, ttk, simpledialog 
+from tkinter import filedialog, Tk, ttk, simpledialog
 import json
 import os
 import sys
+import argparse
 
 # resume session function
 
@@ -53,6 +54,7 @@ def session():
 
     else:
         sys.stdout.write("\r")
+
         sys.stdout.flush()
 
         data = {}
@@ -125,15 +127,17 @@ def clear_points():
     drawing_state["pt1"] = None
     drawing_state["pt2"] = None
 
+
 # time seek functiono
+
 
 class seekDialog(simpledialog.Dialog):
 
     def body(self, master):
-    
+
         self.title("Skip to seconds")
 
-        ttk.Label(master, text = "Enter position in seconds:").grid(row = 0)
+        ttk.Label(master, text="Enter position in seconds:").grid(row=0)
 
         self.secondsEntry = ttk.Entry(master)
 
@@ -144,6 +148,7 @@ class seekDialog(simpledialog.Dialog):
     def apply(self):
 
         self.seconds = self.secondsEntry.get()
+
 
 def seek(video):
 
@@ -161,7 +166,45 @@ def seek(video):
     root.destroy()
 
     video.skip(seconds)
-    
 
 
-    
+def cmdargs():
+
+    epilog = (
+        "Key bindings:\n "
+        "Press '[space]' to pause the video\n "
+        "Press 'q' to quit the video\n "
+        "Press ',' to skip backward\n "
+        "Press '.' to skip forward\n "
+        "Press ']' to increase speed\n "
+        "Press '[' to decrease speed\n\n"
+        "Data and images are saved automatically in the root folder\n\n"
+        "Data collection\n"
+        "Click and drag to draw a bounding box around the fish and start an observation\n"
+        "Use the number keys to record the fish's behavior\n"
+        "Press 'z' to stop the observation \n"
+        "Press 'p' to record a predator in frame."
+    )
+
+    parser = argparse.ArgumentParser(
+        prog="Fish Behavior Video Annotation Tool v0.1",
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog=epilog,
+    )
+
+    parser.add_argument(
+        "-g", "--gpu", help="Run detection model with CUDA.", action="store_true"
+    )
+    parser.add_argument(
+        "-d", "--detect", help="Run with detection model.", action="store_true"
+    )
+    parser.add_argument(
+        "-t", "--track", help="Run with tracking algorythm.", action="store_true"
+    )
+    parser.add_argument(
+        "-s", "--scale", help="Scale the video by factor.", type=int, default=2
+    )
+
+    args = parser.parse_args()
+
+    return args
