@@ -69,6 +69,7 @@ class VideoPane(widgets.QLabel):
         self.drawing = False
 
         self.loadBehaviour()
+        self.loadsSize()
 
         self.setSizePolicy(widgets.QSizePolicy.Expanding, widgets.QSizePolicy.Expanding)
         self.adjustSize()
@@ -122,6 +123,7 @@ class VideoPane(widgets.QLabel):
                     enter_data(
                             frame=frame,
                             data=self.stream.data,
+                            sizes = self.sizes,
                             file=self.stream.path,
                             deployment_id=self.stream.deployment_id,
                             video=self.stream,
@@ -219,6 +221,15 @@ class VideoPane(widgets.QLabel):
                 self.behaviors = json.load(f)
         else:
             raise FileNotFoundError("behaviours.json file not found")
+        
+    def loadsSize(self):
+        if os.path.exists("sizes.json"):
+            with open("sizes.json", "r") as f:
+                sizes_file = json.load(f)
+        else:
+            raise FileNotFoundError("size.json file not found")
+        
+        self.sizes = sizes_file["sizes"]
 
     def keyPressEvent(self, event):
 
@@ -271,7 +282,7 @@ class VideoPane(widgets.QLabel):
             time_out(self.stream, self.obs_label)
         
         elif event.key() == Qt.Key_P:
-            predators(self.stream, self.current_frame, self.obs_label)
+            predators(self.stream, self.current_frame, self.sizes, self.obs_label)
 
         elif event.key() == Qt.Key_C:
             self.pt1 = None

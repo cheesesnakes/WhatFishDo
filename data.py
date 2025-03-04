@@ -42,8 +42,10 @@ def save_to_json(data):
 
 class DataEntryDialog(widgets.QDialog):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, sizes=None):
         super().__init__(parent)
+        self.result = None
+        self.size = sizes
 
         self.setWindowTitle("Enter Fish Data")
 
@@ -75,6 +77,10 @@ class DataEntryDialog(widgets.QDialog):
             widgets.QMessageBox.warning(self, "Error", "Please fill all required fields.")
             return
         
+        if not self.size_entry.text() in self.size:
+            widgets.QMessageBox.warning(self, "Error", "Enter valid size class.")
+            return
+        
         super().accept()
 
         self.releaseKeyboard()
@@ -98,7 +104,7 @@ class DataEntryDialog(widgets.QDialog):
         return self.result
     
 # enter data on fish individuals
-def enter_data(frame, video, data, file, deployment_id, coordinates, status_bar):
+def enter_data(frame, video, data, sizes, file, deployment_id, coordinates, status_bar):
     
     # Variables
     fish_id = "_".join([deployment_id, str(len(data) + 1)])
@@ -107,7 +113,7 @@ def enter_data(frame, video, data, file, deployment_id, coordinates, status_bar)
 
     # Get data from dialog
 
-    dialog = DataEntryDialog()
+    dialog = DataEntryDialog(sizes=sizes)
     dialog.exec_()
     result = dialog.return_result()
 
@@ -182,8 +188,10 @@ def time_out(video, status_bar):
 
 class predatorDialog(widgets.QDialog):
 
-    def __init__(self, parent):
+    def __init__(self, parent, sizes):
         self.result = None
+        self.sizes = sizes
+
         super().__init__(parent)
 
         self.setWindowTitle("Enter Predator Data")
@@ -213,6 +221,10 @@ class predatorDialog(widgets.QDialog):
             widgets.QMessageBox.warning(self, "Error", "Please fill all required fields.")
             return
 
+        if not self.size_entry.text() in self.sizes:
+            widgets.QMessageBox.warning(self, "Error", "Enter valid size class.")
+            return
+        
         super().accept()
 
         self.releaseKeyboard()
@@ -235,7 +247,7 @@ class predatorDialog(widgets.QDialog):
     def return_result(self):
         return self.result
 
-def predators(video, frame, status_bar):
+def predators(video, frame, sizes, status_bar):
     # load predator data from file, if it exists
     predators = {}
 
@@ -247,7 +259,7 @@ def predators(video, frame, status_bar):
     predator_id = "_".join(["PRED", deployment_id, str(len(predators) + 1)])
     time_in = video.frame_time 
     
-    dialog = predatorDialog(video)
+    dialog = predatorDialog(video, sizes)
     dialog.exec_()
 
     if not dialog.result:
