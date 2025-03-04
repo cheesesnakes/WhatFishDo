@@ -24,7 +24,6 @@ class Datatable(widgets.QTableWidget):
             for j in range(columns):
                 self.setItem(i, j, widgets.QTableWidgetItem(str(data.iloc[i, j])))
 
-
 # Define video class
 class VideoPane(widgets.QLabel):
     def __init__(self, video, status_bar):
@@ -35,6 +34,8 @@ class VideoPane(widgets.QLabel):
         self.MouseX = 0
         self.MouseY = 0
         self.setMouseTracking(True)
+
+        self.grabKeyboard()
 
         self.pt1 = None
         self.pt2 = None
@@ -53,8 +54,34 @@ class VideoPane(widgets.QLabel):
         self.timer.start(1000 // 60)  # 60 FPS refresh rate
 
     def update_frame(self):
-        if not self.stream.Q.empty():
+        if not self.stream.Q.empty() and not self.stream.paused:
             frame, frame_time = self.stream.Q.get()
+            
+            if self.pt1 and self.pt2:
+
+                # calculate position and size of rectangle based on curent Qlabel size
+
+                pt1 = ( # Top left corner
+                    
+                    int(self.pt1.x() / self.width() * frame.shape[1]),
+                    int(self.pt1.y() / self.height() * frame.shape[0]),
+                )
+
+                pt2 = ( # Bottom right corner
+                    int(self.pt2.x() / self.width() * frame.shape[1]),
+                    int(self.pt2.y() / self.height() * frame.shape[0]),
+                )
+
+                # Draw rectangle on frame
+                cv2.rectangle(
+                    frame,
+                    pt1,
+                    pt2,
+                    (0, 255, 0),
+                    2,
+                )
+
+
             qt_img = self.cv_to_qt(frame)
             self.original_img = qt_img
             scaled_img = qt_img.scaled(
@@ -78,9 +105,11 @@ class VideoPane(widgets.QLabel):
 
     def mousePressEvent(self, event):
         """Record the position of the mouse when clicked"""
+        
+        self.grabKeyboard()
 
         self.pt1 = event.pos()
-        self.pt2 = event.pos()
+        self.pt2 = event.pos()        
         self.drawing = True
         self.update()
 
@@ -95,8 +124,9 @@ class VideoPane(widgets.QLabel):
 
     def mouseReleaseEvent(self, event):
         """Record the position of the mouse when released"""
-
-        self.pt2 = event.pos()
+        self.pt1 = None
+        self.pt2 = None
+        
         self.drawing = False
         self.update()
 
@@ -104,7 +134,7 @@ class VideoPane(widgets.QLabel):
         """Draw a rectangle on the video pane"""
 
         super().paintEvent(event)
-        if self.drawing:
+        if self.drawing and self.pt1 and self.pt2:
             painter = QPainter(self)
             painter.setPen(QPen(Qt.red, 2, Qt.SolidLine))
             painter.drawRect(
@@ -113,16 +143,64 @@ class VideoPane(widgets.QLabel):
                 self.pt2.x() - self.pt1.x(),
                 self.pt2.y() - self.pt1.y(),
             )
+    
+    def keyPressEvent(self, event):
+
+        if event.key() == Qt.Key_Space:
+            self.stream.paused = not self.stream.paused
+            
+        elif event.key() == Qt.Key_Right:
+
+            with self.stream.lock:
+    
+                self.stream.skip(1)
+
+        elif event.key() == Qt.Key_Left:
+
+            with self.stream.lock:
+                
+                while not self.stream.Q.empty():
+                    self.stream.Q.get()
+                
+                self.stream.skip(-1)
+
+        elif event.key() == Qt.Key_Up:
+            with self.stream.lock:
+
+                self.stream.skip(10)
+
+        elif event.key() == Qt.Key_Down:
+            
+            with self.stream.lock:
+
+                while not self.stream.Q.empty():
+                    self.stream.Q.get()
+
+            self.stream.skip(-10)
+
+        elif event.key() == Qt.Key_C:
+            self.pt1 = None
+            self.pt2 = None
+            self.drawing = False
+            self.update()
+
+        elif event.key() == Qt.Key_Q:
+            sys.exit(0)
+        
+        self.update()
 
 
 # Define menu class
 class MenuBar(widgets.QMenuBar):
     def __init__(self):
         super().__init__()
-        file_menu = self.addMenu("File")
-        for action_text in ["New", "Open", "Save", "Save As", "Exit"]:
-            action = file_menu.addAction(action_text)
-            action.triggered.connect(lambda: print(f"{action_text} clicked"))
+        file_menu = self.addMenu("Exit")
+
+        exit_action = widgets.QAction("Exit", self)
+        exit_action.setShortcut("Ctrl+Q")
+        exit_action.triggered.connect(widgets.qApp.quit)
+        file_menu.addAction(exit_action)
+        
         self.addMenu("Edit")
         self.addMenu("View")
 
@@ -182,6 +260,6 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         sys.stdout.flush()
 
         event.accept()
-
+    
     def datatoPD(self, data):
         return pd.DataFrame(data).T
