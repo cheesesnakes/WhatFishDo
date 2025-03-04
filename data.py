@@ -279,22 +279,7 @@ def predators(video, frame, status_bar):
 
 
 # record behaviour
-behaviors = {
-    "1": "Feeding",
-    "2": "Vigilance",
-    "3": "Moving",
-    "4": "Bite",
-    "5": "Predator avoidance",
-    "6": "Conspecific agression",
-    "7": "Escape from agression",
-    "8": "Escape from predator",
-    "9": "Aggression against predator",
-}
-
-
-def record_behaviour(video, key):
-    global behaviors
-
+def record_behaviour(video, key, status_bar):
     # Get the last fish id
     fish_id = list(video.data.keys())[-1]
 
@@ -302,7 +287,7 @@ def record_behaviour(video, key):
     time = video.frame_time 
 
     # Get the current behaviour
-    bhv = behaviors[key]
+    bhv = behaviors[key]["name"]
 
     behaviour = {"time": time, "behaviour": bhv}
 
@@ -316,4 +301,4 @@ def record_behaviour(video, key):
     save_to_json(video.data)
 
     # Alert on screen
-    print(f"Fish {fish_id} has been recorded to be {bhv} at {time}")
+    status_bar.showMessage(f"Fish {fish_id} has been recorded to be {bhv} at {time}")

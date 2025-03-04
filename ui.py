@@ -5,7 +5,8 @@ import pandas as pd
 from PyQt5 import QtWidgets as widgets
 from PyQt5.QtCore import Qt, QLibraryInfo, QTimer
 from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen
-from data import enter_data, time_out, predators
+from data import enter_data, time_out, predators, record_behaviour
+import json
 
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
     QLibraryInfo.PluginsPath
@@ -41,6 +42,8 @@ class VideoPane(widgets.QLabel):
         self.pt1 = None
         self.pt2 = None
         self.drawing = False
+
+        self.loadBehaviour()
 
         self.setSizePolicy(widgets.QSizePolicy.Expanding, widgets.QSizePolicy.Expanding)
         self.adjustSize()
@@ -167,6 +170,13 @@ class VideoPane(widgets.QLabel):
                 self.pt2.y() - self.pt1.y(),
             )
     
+    def loadBehaviour(self):
+        if os.path.exists("behaviours.json"):
+            with open("behaviours.json", "r") as f:
+                self.behaviors = json.load(f)
+        else:
+            raise FileNotFoundError("behaviours.json file not found")
+
     def keyPressEvent(self, event):
 
         if event.key() == Qt.Key_Space:
@@ -216,6 +226,17 @@ class VideoPane(widgets.QLabel):
 
         elif event.key() == Qt.Key_Q:
             sys.exit(0)
+        
+        # record behaviour
+        else:
+
+            # convert key to string
+            key = event.text()
+
+            # check if key is in behaviours
+
+            if key in self.behaviors.keys():
+                record_behaviour(self.stream, key, self.status_bar, self.behaviors)
         
         self.update()
 
