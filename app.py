@@ -5,7 +5,7 @@
 
 import os
 import cv2
-from funcs import cmdargs, session
+from funcs import cmdargs, session, load_project
 from stream import VideoStream
 import sys
 import time
@@ -28,6 +28,10 @@ def app(detection=False, tracking=False, useGPU=False, scale=2):
 
     app = QtWidgets.QApplication([])
 
+    # project loader
+
+    project = load_project()
+    
     # start or resume session
 
     file, data, start_time = session()
