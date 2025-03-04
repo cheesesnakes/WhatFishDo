@@ -24,6 +24,10 @@ def app(detection=False, tracking=False, useGPU=False, scale=2):
         f"Running with detection: {detection}, tracking {tracking}, and GPU:{useGPU}\n"
     )
 
+    # start the app
+
+    app = QtWidgets.QApplication([])
+
     # start or resume session
 
     file, data, start_time = session()
@@ -87,7 +91,6 @@ def app(detection=False, tracking=False, useGPU=False, scale=2):
 
     # start the main MainWindow
 
-    app = QtWidgets.QApplication([])
     window = MainWindow(data, video)
     window.show()
     sys.exit(app.exec_())
