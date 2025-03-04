@@ -27,23 +27,30 @@ class Datatable(widgets.QTableWidget):
 
 # Define video class
 class VideoPane(widgets.QLabel):
-    def __init__(self, video):
+    def __init__(self, video, status_bar):
         super().__init__()
-        self.video = video
-        self.setSizePolicy(widgets.QSizePolicy.Expanding, widgets.QSizePolicy.Expanding)
-        self.adjustSize()  # Ensures QLabel resizes properly
-        self.setAlignment(Qt.AlignCenter)  # Center image in QLabel
+        self.stream = video
+        self.status_bar = status_bar
 
-        # make a grey image to show when no video is available
+        self.MouseX = 0
+        self.MouseY = 0
+        self.setMouseTracking(True)
+
+        self.setSizePolicy(widgets.QSizePolicy.Expanding, widgets.QSizePolicy.Expanding)
+        self.adjustSize()
+        self.setAlignment(Qt.AlignCenter)
+
+        # Placeholder image before video starts
         self.original_img = QImage(640, 480, QImage.Format_RGB888)
-        # timer for updating
+
+        # Timer for updating video frames
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_frame)
-        self.timer.start(1000 // 60)  # 60 FPS
+        self.timer.start(1000 // 60)  # 60 FPS refresh rate
 
     def update_frame(self):
-        if not self.video.Q.empty():
-            frame, frame_time = self.video.Q.get()
+        if not self.stream.Q.empty():
+            frame, frame_time = self.stream.Q.get()
             qt_img = self.cv_to_qt(frame)
             self.original_img = qt_img
             scaled_img = qt_img.scaled(
@@ -62,8 +69,14 @@ class VideoPane(widgets.QLabel):
                 self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
             )
             self.setPixmap(QPixmap.fromImage(scaled_img))
-            self.adjustSize()  # Ensures QLabel resizes properly
+            self.adjustSize()
         super().resizeEvent(event)
+
+    def mouseMoveEvent(self, event):
+        """Track mouse movements when in video pane"""
+        self.MouseX = event.x()
+        self.MouseY = event.y()
+        self.status_bar.showMessage(f"X: {self.MouseX}, Y: {self.MouseY}")
 
 
 # Define menu class
@@ -79,21 +92,29 @@ class MenuBar(widgets.QMenuBar):
 
 
 # Define main window class
-class MainWindow(widgets.QWidget):
+class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
     def __init__(self, data, video, tableColumns=3, tableRows=3):
         super().__init__()
         self.setWindowTitle("WhatFishDo")
-        self.setGeometry(50, 50, 1280, 720)  # Start with a reasonable size
+        self.setGeometry(50, 50, 1280, 720)
+
+        # Set central widget
+        central_widget = widgets.QWidget()
+        self.setCentralWidget(central_widget)
 
         # Layouts
-        self.layout = widgets.QVBoxLayout(self)
-        self.layout.setMenuBar(MenuBar())
+        self.layout = widgets.QVBoxLayout(central_widget)
+        self.setMenuBar(MenuBar())
+
+        # Status Bar
+        self.status_bar = self.statusBar()
+        self.status_bar.showMessage("Ready")
 
         # Main Content Layout
         self.splitter = widgets.QSplitter(Qt.Horizontal)
 
         # Left Panel (Video)
-        self.video = VideoPane(video)
+        self.video = VideoPane(video, self.status_bar)
         self.splitter.addWidget(self.video)
 
         # Right Panel (Tables)
@@ -114,20 +135,17 @@ class MainWindow(widgets.QWidget):
         self.splitter.setSizes([800, 480])  # Initial sizes
 
         self.layout.addWidget(self.splitter)
-        self.setLayout(self.layout)
+
+    def closeEvent(self, event):
+        sys.stdout.flush()
+        sys.stdout.write("\rQuitting...")
+
+        self.video.stream.pause = False
+        self.video.stream.stop()
+
+        sys.stdout.flush()
+
+        event.accept()
 
     def datatoPD(self, data):
         return pd.DataFrame(data).T
-
-
-# Test the UI
-if __name__ == "__main__":
-    data = pd.DataFrame(
-        {col: [f"{col}{i}" for i in range(3)] for col in ["A", "B", "C"]}
-    )
-    img = cv2.imread("image.png")
-
-    app = widgets.QApplication([])
-    window = MainWindow(data, img)
-    window.show()
-    sys.exit(app.exec_())
