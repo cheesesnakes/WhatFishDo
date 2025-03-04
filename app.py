@@ -9,6 +9,8 @@ from funcs import cmdargs, session
 from stream import VideoStream
 import sys
 import time
+from ui import MainWindow
+from PyQt5 import QtWidgets
 
 
 def app(detection=False, tracking=False, useGPU=False, scale=2):
@@ -82,7 +84,14 @@ def app(detection=False, tracking=False, useGPU=False, scale=2):
     time.sleep(0.2)
     sys.stdout.write("\r                                 ")
 
-    video.process()
+    # start the main MainWindow
+
+    app = QtWidgets.QApplication([])
+    window = MainWindow(data, video)
+    window.show()
+    sys.exit(app.exec_())
+
+    # video.process()
 
     print("\nDone")
 

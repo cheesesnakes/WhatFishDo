@@ -1,11 +1,12 @@
 [project]
-name = "video-annotation"
-version = "0.1.0"
-description = "Add your description here"
+name = "WhatFishDo"
+version = "1.0"
+description = "An application for behaviour transcription from video data"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "opencv-python>=4.11.0.86",
-    "pyside6>=6.8.2.1",
+    "pandas>=2.2.3",
+    "pyqt5>=5.15.11",
     "ruff>=0.9.7",
 ]

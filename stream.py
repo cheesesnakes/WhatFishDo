@@ -73,9 +73,9 @@ class VideoStream:
             if not self.Q.full():
                 with self.lock:
                     ret, frame = self.stream.read()
-                    
+
                     frame_time = self.stream.get(cv2.CAP_PROP_POS_MSEC)
-                    
+
                     # resize the frame
                     if self.scale != 1:
                         if self.useGPU:
