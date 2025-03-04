@@ -82,7 +82,8 @@ def app(detection=False, tracking=False, useGPU=False, scale=2):
     sys.stdout.write("\rStart processing...            ")
     sys.stdout.flush()
     time.sleep(0.2)
-    sys.stdout.write("\r                                 ")
+    sys.stdout.write("\r")
+    sys.stdout.flush()
 
     # start the main MainWindow
 
@@ -90,8 +91,6 @@ def app(detection=False, tracking=False, useGPU=False, scale=2):
     window = MainWindow(data, video)
     window.show()
     sys.exit(app.exec_())
-
-    # video.process()
 
     print("\nDone")
 

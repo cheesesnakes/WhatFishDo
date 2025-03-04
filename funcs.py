@@ -1,6 +1,5 @@
 # requirements
 
-import cv2
 from tkinter import filedialog, Tk, ttk, simpledialog
 import json
 import os
@@ -93,81 +92,7 @@ def select_file():
 
     return file
 
-
-# draw rectangle on frame
-
-drawing_state = {"drawing": False, "pt1": None, "pt2": None}
-
-
-def draw_rectangle(event, x, y, flags, param):
-    global drawing_state
-
-    if event == cv2.EVENT_LBUTTONDOWN:
-        drawing_state["drawing"] = True
-        drawing_state["pt1"] = (x, y)
-
-    elif event == cv2.EVENT_MOUSEMOVE:
-        if drawing_state["drawing"]:
-            drawing_state["pt2"] = (x, y)
-
-    elif event == cv2.EVENT_LBUTTONUP:
-        drawing_state["drawing"] = False
-        drawing_state["pt2"] = (x, y)
-
-
-def get_points():
-    global drawing_state
-
-    return drawing_state["pt1"], drawing_state["pt2"]
-
-
-def clear_points():
-    global drawing_state
-
-    drawing_state["pt1"] = None
-    drawing_state["pt2"] = None
-
-
-# time seek functiono
-
-
-class seekDialog(simpledialog.Dialog):
-
-    def body(self, master):
-
-        self.title("Skip to seconds")
-
-        ttk.Label(master, text="Enter position in seconds:").grid(row=0)
-
-        self.secondsEntry = ttk.Entry(master)
-
-        self.secondsEntry.grid(row=0, column=1)
-
-        return self.secondsEntry
-
-    def apply(self):
-
-        self.seconds = self.secondsEntry.get()
-
-
-def seek(video):
-
-    root = Tk()
-    root.withdraw()
-
-    dialog = seekDialog(root)
-
-    if dialog.seconds is None:
-        root.destroy()
-        return
-
-    seconds = int(dialog.seconds)
-
-    root.destroy()
-
-    video.skip(seconds)
-
-
+# help description
 def cmdargs():
 
     epilog = (

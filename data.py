@@ -279,7 +279,7 @@ def predators(video, frame, status_bar):
 
 
 # record behaviour
-def record_behaviour(video, key, status_bar):
+def record_behaviour(video, key, status_bar, behaviors):
     # Get the last fish id
     fish_id = list(video.data.keys())[-1]
 

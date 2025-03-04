@@ -32,6 +32,7 @@ class VideoPane(widgets.QLabel):
         super().__init__()
         self.stream = video
         self.status_bar = status_bar
+        self.speed = 1
 
         self.MouseX = 0
         self.MouseY = 0
@@ -55,7 +56,7 @@ class VideoPane(widgets.QLabel):
         # Timer for updating video frames
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_frame)
-        self.timer.start(1000 // 60)  # 60 FPS refresh rate
+        self.timer.start(1000 // (60*self.speed))  # 60 FPS refresh rate
 
     def update_frame(self):
         if not self.stream.Q.empty() and not self.stream.paused:
@@ -182,6 +183,18 @@ class VideoPane(widgets.QLabel):
         if event.key() == Qt.Key_Space:
             self.stream.paused = not self.stream.paused
             self.status_bar.showMessage("Paused" if self.stream.paused else "Playing")
+
+        elif event.key() == Qt.Key_J:
+            # slow down video
+            self.speed = max(0.5, self.speed - 0.5)
+            self.timer.setInterval(1000 // int(60*self.speed))
+            self.status_bar.showMessage(f"Speed: {self.speed}")
+        
+        elif event.key() == Qt.Key_K:
+            # speed up video
+            self.speed = min(4, self.speed + 0.5)
+            self.timer.setInterval(1000 // int(60*self.speed))
+            self.status_bar.showMessage(f"Speed: {self.speed}")
             
         elif event.key() == Qt.Key_Right:
 
