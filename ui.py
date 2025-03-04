@@ -32,6 +32,30 @@ class VideoPane(widgets.QLabel):
         super().__init__()
         self.stream = video
         self.status_bar = status_bar
+
+        # Create a widget for the status bar
+        status_widget = widgets.QWidget()
+        status_layout = widgets.QHBoxLayout(status_widget)
+        status_layout.setContentsMargins(0, 0, 0, 0)  # Remove margins
+
+        # Add widgets to the status layout
+        self.cursor_label = widgets.QLabel("X: 0, Y: 0")
+        self.time_label = widgets.QLabel("00:00:00")
+        self.status_label = widgets.QLabel("Ready")
+        self.obs_label = widgets.QLabel("None")
+        self.speed_label = widgets.QLabel("Speed: 1")
+
+
+        status_layout.addWidget(self.cursor_label)
+        status_layout.addWidget(self.time_label)
+        status_layout.addWidget(self.status_label)
+        status_layout.addWidget(self.obs_label)
+        status_layout.addWidget(self.speed_label)
+
+        # Add the status widget to the status bar
+        self.status_bar.addPermanentWidget(status_widget)
+
+
         self.speed = 1
 
         self.MouseX = 0
@@ -102,7 +126,7 @@ class VideoPane(widgets.QLabel):
                             deployment_id=self.stream.deployment_id,
                             video=self.stream,
                             coordinates=(pt1[0], pt1[1], pt2[0], pt2[1]),
-                            status_bar = self.status_bar
+                            status_bar = self.obs_label
                         )
 
                 self.pt1 = None
@@ -118,6 +142,24 @@ class VideoPane(widgets.QLabel):
             self.setPixmap(QPixmap.fromImage(scaled_img))
             self.adjustSize()
 
+            formatted_time = self.calculate_time()
+            self.time_label.setText(formatted_time)
+            self.status_label.setText("Playing")
+
+    def calculate_time(self):
+
+        time = self.stream.frame_time
+
+        # conver milliseconds into hours, minutes and seconds
+
+        hours = int(time // (60 * 60 * 1000))
+        minutes = int((time % (60 * 60 * 1000)) // (60 * 1000))
+        seconds = int((time % (60 * 1000)) // 1000)
+        milliseconds = round((time % 1000), 1)
+
+        # display as HH:MM:SS
+
+        return f"{hours:02}:{minutes:02}:{seconds:02}:{milliseconds:03}"
     def cv_to_qt(self, img):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         return QImage(img.data, img.shape[1], img.shape[0], QImage.Format_RGB888)
@@ -148,7 +190,7 @@ class VideoPane(widgets.QLabel):
             self.update()
         self.MouseX = event.x()
         self.MouseY = event.y()
-        self.status_bar.showMessage(f"X: {self.MouseX}, Y: {self.MouseY}")
+        self.cursor_label.setText(f"X: {self.MouseX}, Y: {self.MouseY}")
 
     def mouseReleaseEvent(self, event):
         """Record the position of the mouse when released"""
@@ -182,19 +224,19 @@ class VideoPane(widgets.QLabel):
 
         if event.key() == Qt.Key_Space:
             self.stream.paused = not self.stream.paused
-            self.status_bar.showMessage("Paused" if self.stream.paused else "Playing")
+            self.status_label.setText("Paused" if self.stream.paused else "Playing")
 
         elif event.key() == Qt.Key_J:
             # slow down video
             self.speed = max(0.5, self.speed - 0.5)
             self.timer.setInterval(1000 // int(60*self.speed))
-            self.status_bar.showMessage(f"Speed: {self.speed}")
+            self.speed_label.setText(f"Speed: {self.speed}")
         
         elif event.key() == Qt.Key_K:
             # speed up video
             self.speed = min(4, self.speed + 0.5)
             self.timer.setInterval(1000 // int(60*self.speed))
-            self.status_bar.showMessage(f"Speed: {self.speed}")
+            self.speed_label.setText(f"Speed: {self.speed}")
             
         elif event.key() == Qt.Key_Right:
 
@@ -226,10 +268,10 @@ class VideoPane(widgets.QLabel):
             self.stream.skip(-10)
         
         elif event.key() == Qt.Key_Z:
-            time_out(self.stream)
+            time_out(self.stream, self.obs_label)
         
         elif event.key() == Qt.Key_P:
-            predators(self.stream, self.current_frame, self.status_bar)
+            predators(self.stream, self.current_frame, self.obs_label)
 
         elif event.key() == Qt.Key_C:
             self.pt1 = None
@@ -249,7 +291,7 @@ class VideoPane(widgets.QLabel):
             # check if key is in behaviours
 
             if key in self.behaviors.keys():
-                record_behaviour(self.stream, key, self.status_bar, self.behaviors)
+                record_behaviour(self.stream, key, self.obs_label, self.behaviors)
         
         self.update()
 
@@ -286,8 +328,7 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
 
         # Status Bar
         self.status_bar = self.statusBar()
-        self.status_bar.showMessage("Ready")
-
+        
         # Main Content Layout
         self.splitter = widgets.QSplitter(Qt.Horizontal)
 

@@ -83,7 +83,7 @@ def app(detection=False, tracking=False, useGPU=False, scale=2):
 
     # initialize the process
 
-    sys.stdout.write("\rStart processing...            ")
+    sys.stdout.write("\rStart main window...            ")
     sys.stdout.flush()
     time.sleep(0.2)
     sys.stdout.write("\r")

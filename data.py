@@ -142,7 +142,7 @@ def enter_data(frame, video, data, file, deployment_id, coordinates, status_bar)
     video.speed = 1
     video.paused = True
     # alert on screen
-    status_bar.showMessage(f"\nObserving fish {fish_id}, species: {species}, size: {size}cm.\n")
+    status_bar.setText(f"\nObserving fish {fish_id}, species: {species}, size: {size}cm.\n")
 
 
 # calculate time the individual has been in the frame
@@ -173,7 +173,7 @@ def time_out(video, status_bar):
         # Pause
         video.paused = True
 
-    status_bar.showMessage(
+    status_bar.setText(
         f"\nFish {fish_id} has been recorded from {round(video.data[fish_id]['time_in'], 2)} to {round(time_out, 2)}\n"
     )
 
@@ -275,7 +275,7 @@ def predators(video, frame, status_bar):
             json.dump(predators, f, indent=4)
 
     # Alert on screen
-    status_bar.showMessage(f"\rPredator {predator_id}, species: {dialog.result["species"]}, size: {dialog.result["size_class"]}cm., time: {time_in}\n")
+    status_bar.setText(f"\rPredator {predator_id}, species: {dialog.result["species"]}, size: {dialog.result["size_class"]}cm., time: {time_in}\n")
 
 
 # record behaviour
@@ -301,4 +301,4 @@ def record_behaviour(video, key, status_bar, behaviors):
     save_to_json(video.data)
 
     # Alert on screen
-    status_bar.showMessage(f"Fish {fish_id} has been recorded to be {bhv} at {time}")
+    status_bar.setText(f"Fish {fish_id} has been recorded to be {bhv} at {time}")
