@@ -4,7 +4,7 @@ import cv2
 import pandas as pd
 from PyQt5 import QtWidgets as widgets
 from PyQt5.QtCore import Qt, QLibraryInfo, QTimer
-from PyQt5.QtGui import QImage, QPixmap
+from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen
 
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
     QLibraryInfo.PluginsPath
@@ -35,6 +35,10 @@ class VideoPane(widgets.QLabel):
         self.MouseX = 0
         self.MouseY = 0
         self.setMouseTracking(True)
+
+        self.pt1 = None
+        self.pt2 = None
+        self.drawing = False
 
         self.setSizePolicy(widgets.QSizePolicy.Expanding, widgets.QSizePolicy.Expanding)
         self.adjustSize()
@@ -72,11 +76,43 @@ class VideoPane(widgets.QLabel):
             self.adjustSize()
         super().resizeEvent(event)
 
+    def mousePressEvent(self, event):
+        """Record the position of the mouse when clicked"""
+
+        self.pt1 = event.pos()
+        self.pt2 = event.pos()
+        self.drawing = True
+        self.update()
+
     def mouseMoveEvent(self, event):
         """Track mouse movements when in video pane"""
+        if self.drawing:
+            self.pt2 = event.pos()
+            self.update()
         self.MouseX = event.x()
         self.MouseY = event.y()
         self.status_bar.showMessage(f"X: {self.MouseX}, Y: {self.MouseY}")
+
+    def mouseReleaseEvent(self, event):
+        """Record the position of the mouse when released"""
+
+        self.pt2 = event.pos()
+        self.drawing = False
+        self.update()
+
+    def paintEvent(self, event):
+        """Draw a rectangle on the video pane"""
+
+        super().paintEvent(event)
+        if self.drawing:
+            painter = QPainter(self)
+            painter.setPen(QPen(Qt.red, 2, Qt.SolidLine))
+            painter.drawRect(
+                self.pt1.x(),
+                self.pt1.y(),
+                self.pt2.x() - self.pt1.x(),
+                self.pt2.y() - self.pt1.y(),
+            )
 
 
 # Define menu class
