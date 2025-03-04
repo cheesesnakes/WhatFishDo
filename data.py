@@ -1,11 +1,7 @@
 import cv2
 import json
 import os
-import tkinter as tk
-from tkinter import simpledialog
-from tkinter import ttk
-from funcs import drawing_state, clear_points
-
+from PyQt5 import QtWidgets as widgets
 
 # save the image within the rectangle
 def save_image(frame, coordinates, fish_id):
@@ -44,91 +40,113 @@ def save_to_json(data):
         print(f"\nError saving to JSON: {e}")
 
 
-class DataEntryDialog(simpledialog.Dialog):
-    def body(self, master):
-        self.title("Enter Fish Data")
+class DataEntryDialog(widgets.QDialog):
 
-        ttk.Label(master, text="Species:").grid(row=0)
-        ttk.Label(master, text="Group:").grid(row=1)
-        ttk.Label(master, text="Size Class (cm):").grid(row=2)
-        ttk.Label(master, text="Remarks:").grid(row=3)
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
-        self.species_entry = ttk.Entry(master)
-        self.group_entry = ttk.Entry(master)
-        self.size_entry = ttk.Entry(master)
-        self.remarks_entry = ttk.Entry(master)
+        self.setWindowTitle("Enter Fish Data")
 
-        self.species_entry.grid(row=0, column=1)
-        self.group_entry.grid(row=1, column=1)
-        self.size_entry.grid(row=2, column=1)
-        self.remarks_entry.grid(row=3, column=1)
+        layout = widgets.QFormLayout()
 
-        return self.species_entry  # initial focus
+        self.species_entry = widgets.QLineEdit()
+        self.group_entry = widgets.QLineEdit()
+        self.size_entry = widgets.QLineEdit()
+        self.remarks_entry = widgets.QLineEdit()
 
-    def apply(self):
-        self.result = {
-            "species": self.species_entry.get(),
-            "group": self.group_entry.get(),
-            "size_class": self.size_entry.get(),
-            "remarks": self.remarks_entry.get(),
-        }
+        layout.addRow("Species*:", self.species_entry)
+        layout.addRow("Group*:", self.group_entry)
+        layout.addRow("Size Class (cm)*:", self.size_entry)
+        layout.addRow("Remarks:", self.remarks_entry)
+        
+        layout.addRow(widgets.QPushButton("Submit", clicked=self.accept))
+        layout.addRow(widgets.QPushButton("Cancel", clicked=self.reject))
+        self.setLayout(layout)
 
+    def accept(self):
+        
+        # Check if all fields are filled
 
-# enter data on fish individuals
-def enter_data(frame, video, data, file, deployment_id):
-    global drawing_state
-    
-    if drawing_state["pt1"] and drawing_state["pt2"] and not drawing_state["drawing"]:
-        # Variables
-        fish_id = "_".join([deployment_id, str(len(data) + 1)])
-        time_in = video.frame_time 
-        print(f"\n Fish: {fish_id}, Time in: {time_in}")
-
-        root = tk.Tk()
-        root.withdraw()  # Hide the root window
-
-        dialog = DataEntryDialog(root)
-        if dialog.result is None:
-            clear_points()
-            root.destroy()
-            video.speed = 1
+        if not all([
+            self.species_entry.text(),
+            self.group_entry.text(),
+            self.size_entry.text()
+        ]):
+            widgets.QMessageBox.warning(self, "Error", "Please fill all required fields.")
             return
+        
+        super().accept()
 
-        species = dialog.result["species"]
-        group = dialog.result["group"]
-        size = dialog.result["size_class"]
-        remarks = dialog.result["remarks"]
+        self.releaseKeyboard()
 
-        root.destroy()  # Destroy the root window after input
-
-        # Coordinates
-        x1, y1 = drawing_state["pt1"]
-        x2, y2 = drawing_state["pt2"]
-
-        data[fish_id] = {
-            "species": species,
-            "group": group,
-            "size_class": size,
-            "remarks": remarks,
-            "coordinates": (x1, y1, x2, y2),
-            "file": file,
-            "time_in": time_in,
-            "time_out": 0,
+        self.result = {
+            "species": self.species_entry.text(),
+            "group": self.group_entry.text(),
+            "size_class": self.size_entry.text(),
+            "remarks": self.remarks_entry.text()
         }
 
-        save_image(frame, (x1, y1, x2, y2), fish_id)
-        save_to_json(data)
-        clear_points()
+        self.return_result()
 
-        video.stream.set(cv2.CAP_PROP_POS_MSEC, time_in)
-        video.speed = 1
-        video.paused = True
-        # alert on screen
-        print(f"\nObserving fish {fish_id}, species: {species}, size: {size}cm.\n")
+    def reject(self):
+        self.releaseKeyboard()
+        self.result = None
+        self.return_result()
+        super().reject()
+    
+    def return_result(self):
+        return self.result
+    
+# enter data on fish individuals
+def enter_data(frame, video, data, file, deployment_id, coordinates, status_bar):
+    
+    # Variables
+    fish_id = "_".join([deployment_id, str(len(data) + 1)])
+    time_in = video.frame_time 
+    print(f"\n Fish: {fish_id}, Time in: {time_in}")
+
+    # Get data from dialog
+
+    dialog = DataEntryDialog()
+    dialog.exec_()
+    result = dialog.return_result()
+
+    if not result:
+
+        return
+    
+    species = result["species"]
+    group = result["group"]
+    size = result["size_class"]
+    remarks = result["remarks"]
+
+
+    # Coordinates
+    x1, y1, x2, y2 = coordinates
+
+    data[fish_id] = {
+        "species": species,
+        "group": group,
+        "size_class": size,
+        "remarks": remarks,
+        "coordinates": (x1, y1, x2, y2),
+        "file": file,
+        "time_in": time_in,
+        "time_out": 0,
+    }
+
+    save_image(frame, (x1, y1, x2, y2), fish_id)
+    save_to_json(data)
+
+    video.stream.set(cv2.CAP_PROP_POS_MSEC, time_in)
+    video.speed = 1
+    video.paused = True
+    # alert on screen
+    status_bar.showMessage(f"\nObserving fish {fish_id}, species: {species}, size: {size}cm.\n")
 
 
 # calculate time the individual has been in the frame
-def time_out(video):
+def time_out(video, status_bar):
     """After enter_data is run, continue until click and record time out"""
 
     # Get the last fish id
@@ -155,45 +173,69 @@ def time_out(video):
         # Pause
         video.paused = True
 
-    # Clear points
-    clear_points()
-
-    print(
+    status_bar.showMessage(
         f"\nFish {fish_id} has been recorded from {round(video.data[fish_id]['time_in'], 2)} to {round(time_out, 2)}\n"
     )
 
 
 # predator data entry
 
-class predatorDialog(simpledialog.Dialog):
+class predatorDialog(widgets.QDialog):
 
-    def body(self, master):
+    def __init__(self, parent):
+        self.result = None
+        super().__init__(parent)
 
-        self.title("Enter Predator Data")
+        self.setWindowTitle("Enter Predator Data")
 
-        ttk.Label(master, text="Species").grid(row=0)
-        ttk.Label(master, text="Size Class (cm)").grid(row=1)
-        ttk.Label(master, text="Remarks").grid(row=2)
+        layout = widgets.QFormLayout()
 
-        self.species_entry = ttk.Entry(master)
-        self.size_entry = ttk.Entry(master)
-        self.remarks_entry = ttk.Entry(master)
+        self.species_entry = widgets.QLineEdit()
+        self.size_entry = widgets.QLineEdit()
+        self.remarks_entry = widgets.QLineEdit()
 
-        self.species_entry.grid(row=0, column=1)
-        self.size_entry.grid(row=1, column=1)
-        self.remarks_entry.grid(row=2, column=1)
+        layout.addRow("Species*:", self.species_entry)
+        layout.addRow("Size Class (cm)*:", self.size_entry)
+        layout.addRow("Remarks:", self.remarks_entry)
 
-        return self.species_entry
+        layout.addRow(widgets.QPushButton("Submit", clicked=self.accept))
+        layout.addRow(widgets.QPushButton("Cancel", clicked=self.reject))
+        self.setLayout(layout)
 
-    def apply(self):
+    def accept(self):
+
+        # Check if all fields are filled
+
+        if not all([
+            self.species_entry.text(),
+            self.size_entry.text()
+        ]):
+            widgets.QMessageBox.warning(self, "Error", "Please fill all required fields.")
+            return
+
+        super().accept()
+
+        self.releaseKeyboard()
 
         self.result = {
-            "species": self.species_entry.get(),
-            "size_class": self.size_entry.get(),
-            "remarks": self.remarks_entry.get()
+            "species": self.species_entry.text(),
+            "size_class": self.size_entry.text(),
+            "remarks": self.remarks_entry.text()
         }
 
-def predators(video):
+        self.return_result()
+
+    def reject(self):
+
+        self.releaseKeyboard()
+        self.result = None
+        self.return_result()
+        super().reject()
+
+    def return_result(self):
+        return self.result
+
+def predators(video, frame, status_bar):
     # load predator data from file, if it exists
     predators = {}
 
@@ -205,15 +247,12 @@ def predators(video):
     predator_id = "_".join(["PRED", deployment_id, str(len(predators) + 1)])
     time_in = video.frame_time 
     
-    root = tk.Tk()
-    root.withdraw()
+    dialog = predatorDialog(video)
+    dialog.exec_()
 
-    dialog = predatorDialog(root)
-    
-    if dialog.result is None:
-        root.destroy()
+    if not dialog.result:
         return
-
+    
     # Save data
     predators[predator_id] = {
         "species": dialog.result["species"],
@@ -221,11 +260,6 @@ def predators(video):
         "time": time_in,
         "remarks": dialog.result["remarks"]
     }
-
-    root.destroy()
-
-    # Get and save image
-    frame, frame_time = video.Q.get()
     
     cv2.imwrite(f"predator/{predator_id}.png", frame)
 
@@ -241,7 +275,7 @@ def predators(video):
             json.dump(predators, f, indent=4)
 
     # Alert on screen
-    print(f"\rPredator {predator_id}, species: {dialog.result["species"]}, size: {dialog.result["size_class"]}cm., time: {frame_time}\n")
+    status_bar.showMessage(f"\rPredator {predator_id}, species: {dialog.result["species"]}, size: {dialog.result["size_class"]}cm., time: {time_in}\n")
 
 
 # record behaviour

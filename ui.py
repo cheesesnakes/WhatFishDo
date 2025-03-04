@@ -5,6 +5,7 @@ import pandas as pd
 from PyQt5 import QtWidgets as widgets
 from PyQt5.QtCore import Qt, QLibraryInfo, QTimer
 from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen
+from data import enter_data, time_out, predators
 
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
     QLibraryInfo.PluginsPath
@@ -55,9 +56,12 @@ class VideoPane(widgets.QLabel):
 
     def update_frame(self):
         if not self.stream.Q.empty() and not self.stream.paused:
-            frame, frame_time = self.stream.Q.get()
+            frame, self.stream.frame_time = self.stream.Q.get()
             
-            if self.pt1 and self.pt2:
+            self.current_frame = frame
+
+            # data entry
+            if self.pt1 and self.pt2 and not self.drawing:
 
                 # calculate position and size of rectangle based on curent Qlabel size
 
@@ -81,6 +85,26 @@ class VideoPane(widgets.QLabel):
                     2,
                 )
 
+                self.stream.paused = True
+
+                with self.stream.lock:
+
+                    self.releaseKeyboard()
+
+                    enter_data(
+                            frame=frame,
+                            data=self.stream.data,
+                            file=self.stream.path,
+                            deployment_id=self.stream.deployment_id,
+                            video=self.stream,
+                            coordinates=(pt1[0], pt1[1], pt2[0], pt2[1]),
+                            status_bar = self.status_bar
+                        )
+
+                self.pt1 = None
+                self.pt2 = None
+
+                self.grabKeyboard()
 
             qt_img = self.cv_to_qt(frame)
             self.original_img = qt_img
@@ -124,8 +148,7 @@ class VideoPane(widgets.QLabel):
 
     def mouseReleaseEvent(self, event):
         """Record the position of the mouse when released"""
-        self.pt1 = None
-        self.pt2 = None
+        self.pt2 = event.pos()
         
         self.drawing = False
         self.update()
@@ -148,6 +171,7 @@ class VideoPane(widgets.QLabel):
 
         if event.key() == Qt.Key_Space:
             self.stream.paused = not self.stream.paused
+            self.status_bar.showMessage("Paused" if self.stream.paused else "Playing")
             
         elif event.key() == Qt.Key_Right:
 
@@ -177,6 +201,12 @@ class VideoPane(widgets.QLabel):
                     self.stream.Q.get()
 
             self.stream.skip(-10)
+        
+        elif event.key() == Qt.Key_Z:
+            time_out(self.stream)
+        
+        elif event.key() == Qt.Key_P:
+            predators(self.stream, self.current_frame, self.status_bar)
 
         elif event.key() == Qt.Key_C:
             self.pt1 = None
