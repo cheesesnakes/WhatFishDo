@@ -11,10 +11,15 @@ import sys
 import time
 from ui import MainWindow
 from PyQt5 import QtWidgets
+import json
 
 
-def app(detection=False, tracking=False, useGPU=False, scale=2):
+def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
     os.system("clear")
+    # set environment variables
+
+    os.environ["OPENCV_FFMPEG_READ_ATTEMPTS"] = "150000"
+    os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "threads;1|video_codec;hevc"
 
     # welcome message
 
@@ -30,64 +35,81 @@ def app(detection=False, tracking=False, useGPU=False, scale=2):
 
     # project loader
 
-    project = load_project()
-    
+    if not Test:
+        project_info = load_project()
+
+    else:
+
+        with open("project.json", "r") as f:
+            project_info = json.load(f)
+
     # start or resume session
 
-    file, data, start_time = session()
+    if not Test:
+        file, data, start_time = session(project_info)
 
-    # set deployment id
-    deployment_id = file.split("/")
-    deployment_id = deployment_id[-3:-1]
-    deployment_id = "_".join(deployment_id[::-1])
+    else:
 
-    # set environment variables
+        file = "/home/cheesesnakes/Storage/files/Shawn/Work/PhD/Thesis/chapter-4/Analysis/video-annotation/videos/20250127/positive-control/GX030262.MP4"
+        start_time = 0
 
-    os.environ["OPENCV_FFMPEG_READ_ATTEMPTS"] = "150000"
-    os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "threads;1|video_codec;hevc"
+        with open("data.json", "r") as f:
+            data = json.load(f)
 
-    # print parent file and file name
+    if file is not None:
 
-    print(f"Deployment: {deployment_id}", f"File: {file}", sep="\n")
+        # set deployment id
+        deployment_id = file.split("/")
+        deployment_id = deployment_id[-3:-1]
+        deployment_id = "_".join(deployment_id[::-1])
 
-    # open the video
+        # print parent file and file name
 
-    sys.stdout.write("\rInitialising...")
-    sys.stdout.flush()
+        print(f"Deployment: {deployment_id}", f"File: {file}", sep="\n")
 
-    video = VideoStream(
-        data=data,
-        deployment_id=deployment_id,
-        path=file,
-        useGPU=useGPU,
-        detection=detection,
-        tracking=tracking,
-        scale=scale,
-    ).start()
+        # open the video
 
-    sys.stdout.write("\rInitialised.    ")
-    sys.stdout.flush()
-
-    if start_time > 0:
-        sys.stdout.write("\rSearching for last fish...")
+        sys.stdout.write("\rInitialising...")
         sys.stdout.flush()
 
-        with video.lock:
-            # clear the queue
+        video = VideoStream(
+            data=data,
+            deployment_id=deployment_id,
+            path=file,
+            useGPU=useGPU,
+            detection=detection,
+            tracking=tracking,
+            scale=scale,
+        ).start()
 
-            while not video.Q.empty():
-                video.Q.get()
+        sys.stdout.write("\rInitialised.    ")
+        sys.stdout.flush()
 
-            # set
-
-            video.stream.set(cv2.CAP_PROP_POS_MSEC, start_time)
-
-            sys.stdout.write("\rFound last fish!!!              ")
+        if start_time > 0:
+            sys.stdout.write("\rSearching for last fish...")
             sys.stdout.flush()
+
+            with video.lock:
+                # clear the queue
+
+                while not video.Q.empty():
+                    video.Q.get()
+
+                # set
+
+                video.stream.set(cv2.CAP_PROP_POS_MSEC, start_time * 1000)
+
+                sys.stdout.write("\rFound last fish!!!              ")
+                sys.stdout.flush()
+                time.sleep(0.5)
+                sys.stdout.write("\r")
+                sys.stdout.flush()
 
     # initialize the process
 
     sys.stdout.write("\rStart main window...            ")
+    time.sleep(0.5)
+    sys.stdout.write("\r")
     sys.stdout.flush()
     time.sleep(0.2)
     sys.stdout.write("\r")

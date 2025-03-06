@@ -140,10 +140,6 @@ class VideoStream:
         # Release resources
         self.stream.release()
 
-        # destroy windows
-
-        cv2.destroyAllWindows()
-
         # Clear queue
         while not self.Q.empty():
             self.Q.get()

@@ -5,8 +5,13 @@ description = "An application for behaviour transcription from video data"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "opencv-python>=4.11.0.86",
+    "opencv-python-headless>=4.11.0.86",
     "pandas>=2.2.3",
     "pyqt5>=5.15.11",
+    "pytest>=8.3.5",
+    "pytest-qt>=4.4.0",
     "ruff>=0.9.7",
 ]
+[tool.pytest.ini_options]
+pythonpath = ["."]
+qt_api= "pyqt5"
