@@ -1,17 +1,46 @@
 import json
 import sys
 import os
-from tkinter import N
 import cv2
+import time
 import pandas as pd
 from PyQt5 import QtWidgets as widgets
 from PyQt5.QtCore import Qt, QLibraryInfo, QTimer
 from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen
 from assets.data import enter_data, time_out, predators, record_behaviour
+from assets.stream import VideoStream
 
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
     QLibraryInfo.PluginsPath
 )
+
+# user prompt for resume
+
+
+class ResumeDialog(widgets.QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle("Session")
+
+        layout = widgets.QFormLayout()
+
+        self.resume = widgets.QPushButton("Resume")
+        self.new = widgets.QPushButton("New")
+
+        layout.addRow("Resume", self.resume)
+        layout.addRow("New", self.new)
+
+        self.resume.clicked.connect(self.resume_session)
+        self.new.clicked.connect(self.new_session)
+
+        self.setLayout(layout)
+
+    def resume_session(self):
+        self.accept()
+
+    def new_session(self):
+        self.reject()
 
 
 # Define table class
@@ -31,9 +60,11 @@ class Datatable(widgets.QTableWidget):
 
 # Define video class
 class VideoPane(widgets.QLabel):
-    def __init__(self, video, project_info, status_bar):
+    def __init__(self, project_info, stream_properties, status_bar):
         super().__init__()
-        self.stream = video
+
+        self.project_info = project_info
+
         self.status_bar = status_bar
 
         # Create a widget for the status bar
@@ -77,16 +108,124 @@ class VideoPane(widgets.QLabel):
         # Placeholder image before video starts
         self.original_img = QImage(640, 480, QImage.Format_RGB888)
 
+        # initialise video
+
+        self.start_stream(stream_properties)
+
         # Timer for updating video frames
 
-        if video is not None:
+        if self.stream is not None:
             self.timer = QTimer(self)
             self.timer.timeout.connect(self.update_frame)
             self.timer.start(1000 // (60 * self.speed))  # 60 FPS refresh rate
 
             self.grabKeyboard()
 
+    def session(self):
+        project_info = self.project_info
+
+        start_time = None
+        file = None
+        data = {}
+
+        # prompt user if they want to resume
+
+        resume = ResumeDialog()
+        resume.exec_()
+
+        if resume.result() == 1:
+            # get data file
+
+            data_file = project_info["data_file"]
+
+            if os.path.exists(data_file):
+                with open(data_file, "r") as f:
+                    data = json.load(f)
+
+            if project_info["type"] == "Individual":
+                # find next individual
+
+                last_ind = list(data.keys())[-1]
+
+                file = data[last_ind]["file"]
+                start_time = data[last_ind]["time_in"]
+
+            else:
+                if project_info["sample_n"] > 0:
+                    # find next sample
+
+                    for plot in project_info["samples"].keys():
+                        for sample in project_info["samples"][plot].keys():
+                            if (
+                                project_info["samples"][plot][sample]["status"]
+                                == "pending"
+                            ):
+                                file = project_info["samples"][plot][sample]["video"]
+                                start_time = project_info["samples"][plot][sample][
+                                    "start_time"
+                                ]
+                                break
+
+        return file, data, start_time
+
+    def start_stream(self, stream_properties):
+        video = None
+
+        file, data, start_time = self.session()
+
+        self.stream = None
+
+        if file is not None:
+            # set deployment id
+            deployment_id = file.split("/")
+            deployment_id = deployment_id[-3:-1]
+            deployment_id = "_".join(deployment_id[::-1])
+
+            # print parent file and file name
+
+            print(f"Deployment: {deployment_id}", f"File: {file}", sep="\n")
+
+            # open the video
+
+            sys.stdout.write("\rInitialising...")
+            sys.stdout.flush()
+
+            self.stream = VideoStream(
+                data=data,
+                deployment_id=deployment_id,
+                path=file,
+                useGPU=stream_properties["useGPU"],
+                detection=stream_properties["detection"],
+                tracking=stream_properties["tracking"],
+                scale=stream_properties["scale"],
+            ).start()
+
+            sys.stdout.write("\rInitialised.    ")
+            sys.stdout.flush()
+
+            if start_time is not None:
+                sys.stdout.write("\rSearching for last fish...")
+                sys.stdout.flush()
+
+                with self.stream.lock:
+                    # clear the queue
+
+                    while not self.stream.Q.empty():
+                        self.stream.Q.get()
+
+                    # set
+
+                    self.stream.stream.set(cv2.CAP_PROP_POS_MSEC, start_time * 1000)
+
+                    sys.stdout.write("\rFound last fish!!!              ")
+                    sys.stdout.flush()
+                    time.sleep(0.5)
+                    sys.stdout.write("\r")
+                    sys.stdout.flush()
+
     def update_frame(self):
+        self.sample_queue()
+
         if not self.stream.Q.empty() and not self.stream.paused:
             frame, self.stream.frame_time = self.stream.Q.get()
 
@@ -147,6 +286,9 @@ class VideoPane(widgets.QLabel):
             formatted_time = self.calculate_time()
             self.time_label.setText(formatted_time)
             self.status_label.setText("Playing")
+
+    def sample_queue(self):
+        pass
 
     def calculate_time(self):
         time = self.stream.frame_time
@@ -310,8 +452,11 @@ class MenuBar(widgets.QMenuBar):
 
 # Define main window class
 class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
-    def __init__(self, project_info, data, video, tableColumns=3, tableRows=3):
+    def __init__(self, project_info, stream_properties, tableColumns=3, tableRows=3):
         super().__init__()
+
+        self.project_info = project_info
+
         self.setWindowTitle("WhatFishDo")
         self.setGeometry(50, 50, 1280, 720)
 
@@ -330,11 +475,11 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         self.splitter = widgets.QSplitter(Qt.Horizontal)
 
         # Left Panel (Video)
-        self.video = VideoPane(video, project_info, self.status_bar)
+        self.video = VideoPane(project_info, stream_properties, self.status_bar)
         self.splitter.addWidget(self.video)
 
         # Right Panel (Tables)
-        self.data = self.datatoPD(data)
+        self.data = self.datatoPD()
         table_container = widgets.QVBoxLayout()
         self.tab1 = Datatable(self.data, tableColumns, tableRows)
         self.tab2 = Datatable(self.data, tableColumns, tableRows)
@@ -365,5 +510,13 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
 
         event.accept()
 
-    def datatoPD(self, data):
+    def datatoPD(self):
+        data = {}
+
+        data_file = self.project_info["data_file"]
+
+        if os.path.exists(data_file):
+            with open(data_file, "r") as f:
+                data = json.load(f)
+
         return pd.DataFrame(data).T

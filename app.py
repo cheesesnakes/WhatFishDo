@@ -6,9 +6,7 @@
 # setup imports
 import sys
 import os
-import cv2
-from assets.funcs import cmdargs, session, load_project
-from assets.stream import VideoStream
+from assets.funcs import cmdargs, load_project
 import time
 from assets.ui import MainWindow
 from PyQt5 import QtWidgets
@@ -37,75 +35,24 @@ def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
 
     project_info = load_project()
 
-    # start or resume session
-    if project_info is not None:
-        file, data, start_time = session(project_info)
-    else:
-        file, data, start_time = None, {}, None
+    # set stream properties
 
-    video = None
-
-    if file is not None:
-        # set deployment id
-        deployment_id = file.split("/")
-        deployment_id = deployment_id[-3:-1]
-        deployment_id = "_".join(deployment_id[::-1])
-
-        # print parent file and file name
-
-        print(f"Deployment: {deployment_id}", f"File: {file}", sep="\n")
-
-        # open the video
-
-        sys.stdout.write("\rInitialising...")
-        sys.stdout.flush()
-
-        video = VideoStream(
-            data=data,
-            deployment_id=deployment_id,
-            path=file,
-            useGPU=useGPU,
-            detection=detection,
-            tracking=tracking,
-            scale=scale,
-        ).start()
-
-        sys.stdout.write("\rInitialised.    ")
-        sys.stdout.flush()
-
-        if start_time is not None:
-            sys.stdout.write("\rSearching for last fish...")
-            sys.stdout.flush()
-
-            with video.lock:
-                # clear the queue
-
-                while not video.Q.empty():
-                    video.Q.get()
-
-                # set
-
-                video.stream.set(cv2.CAP_PROP_POS_MSEC, start_time * 1000)
-
-                sys.stdout.write("\rFound last fish!!!              ")
-                sys.stdout.flush()
-                time.sleep(0.5)
-                sys.stdout.write("\r")
-                sys.stdout.flush()
-
+    stream_properties = {
+        "detection": detection,
+        "tracking": tracking,
+        "useGPU": useGPU,
+        "scale": scale,
+    }
     # initialize the process
 
     sys.stdout.write("\rStart main window...            ")
     time.sleep(0.5)
     sys.stdout.write("\r")
     sys.stdout.flush()
-    time.sleep(0.2)
-    sys.stdout.write("\r")
-    sys.stdout.flush()
 
     # start the main MainWindow
 
-    window = MainWindow(project_info, data, video)
+    window = MainWindow(project_info, stream_properties)
     window.show()
     sys.exit(app.exec_())
 

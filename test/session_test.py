@@ -1,33 +1,6 @@
-from random import sample
-from assets.funcs import ResumeDialog, projectDialog, projectInit, session
+from assets.funcs import projectDialog, projectInit
 from unittest.mock import patch
 import os
-import json
-
-
-def test_resumeDialog(qtbot):
-    dialog = ResumeDialog()
-    dialog.show()
-
-    qtbot.addWidget(dialog)
-
-    assert dialog.isVisible() is True
-
-    dialog.resume.click()
-
-    assert dialog.isVisible() is False
-
-    assert dialog.result() == 1
-
-    dialog.show()
-
-    assert dialog.isVisible() is True
-
-    dialog.new.click()
-
-    assert dialog.isVisible() is False
-
-    assert dialog.result() == 0
 
 
 def test_projectDialog(qtbot):
@@ -131,36 +104,3 @@ def test_projectInit(qtbot):
     assert dialog.project_info is not None
 
     assert os.path.exists("project.json") is True
-
-
-def test_Session_new():
-    project_info = None
-
-    with (
-        patch.object(ResumeDialog, "exec_"),
-        patch.object(ResumeDialog, "result", return_value=0),
-    ):
-        file, data, start_time = session(project_info)
-
-    assert file is None
-    assert isinstance(data, dict)
-    assert start_time is None
-
-
-def test_Session_resume():
-    if os.path.exists("project.json") is False:
-        test_projectInit()
-    else:
-        # load project.json
-        with open("project.json", "r") as file:
-            project_info = json.load(file)
-
-    with (
-        patch.object(ResumeDialog, "exec_"),
-        patch.object(ResumeDialog, "result", return_value=1),
-    ):
-        file, data, start_time = session(project_info)
-
-    assert file is not None
-    assert isinstance(data, dict)
-    assert start_time is not None
