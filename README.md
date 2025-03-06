@@ -47,10 +47,10 @@ WhatFishDo is designed to assist researchers in annotating behavior from video f
 
 ### Running the Tool
 
-To run the tool, use the following command:
+I recommend using [`uv`](https://docs.astral.sh/uv/) package and enviornment manager. With `uv` you can simply use the following command to run the application:
 
 ```sh
-python app.py
+uv run app.py
 ```
 
 ### Key Bindings
