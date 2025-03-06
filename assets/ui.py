@@ -61,7 +61,7 @@ class behTable(widgets.QTableWidget):
 class samplePrompt(widgets.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Sample Ennder")
+        self.setWindowTitle("Sample End")
         layout = widgets.QVBoxLayout()
         self.next = widgets.QPushButton("Next")
         self.cancel = widgets.QPushButton("Cancel")
@@ -104,12 +104,7 @@ class VideoPane(widgets.QLabel):
             self.start_stream()
         else:
             self.stream = None
-
-        if self.stream is not None:
-            self.timer = QTimer(self)
-            self.timer.timeout.connect(self.update_frame)
-            self.timer.start(1000 // (FPS * self.speed))
-            self.grabKeyboard()
+            self.quque = None
 
     def init_status_bar(self):
         status_widget = widgets.QWidget()
@@ -127,21 +122,27 @@ class VideoPane(widgets.QLabel):
         status_layout.addWidget(self.speed_label)
         self.status_bar.addPermanentWidget(status_widget)
 
-    def session(self, next=True):
+    def session(self):
         project_info = self.project_info
+
         sample_id = None
         plot = None
         file = None
         data = {}
+
+        # load data file
         data_file = project_info["data_file"]
+
         if os.path.exists(data_file):
             with open(data_file, "r") as f:
                 data = json.load(f)
+
         if project_info["type"] == "Individual":
             last_ind = list(data.keys())[-1]
             file = data[last_ind]["file"]
             sample_id = data[last_ind]["plot_id"]
         else:
+            # find next pending sample
             if project_info["sample_n"] > 0:
                 for plot in project_info["samples"].keys():
                     for sample in project_info["samples"][plot].keys():
@@ -150,17 +151,31 @@ class VideoPane(widgets.QLabel):
                             plot = plot
                             sample_id = sample
                             break
+
         return file, data, plot, sample_id
 
-    def start_stream(self):
+    def start_stream(self, queue=None):
         stream_properties = self.stream_properties
 
-        file, data, plot, sample_id = self.session()
+        if queue is None:
+            file, data, plot, sample_id = self.session()
+            self.quque = (plot, sample_id)
+        else:
+            plot, sample_id = queue
+
+            file = self.project_info["samples"][plot][sample_id]["video"]
+            data = {}
+            with open(self.project_info["data_file"], "r") as f:
+                data = json.load(f)
+
         self.stream = None
+
         if file is not None:
             print(f"Sample: {sample_id}", f"File: {file}", sep="\n")
+
             sys.stdout.write("\rInitialising...")
             sys.stdout.flush()
+
             self.stream = VideoStream(
                 data=data,
                 plot_id=plot,
@@ -171,30 +186,62 @@ class VideoPane(widgets.QLabel):
                 tracking=stream_properties["tracking"],
                 scale=stream_properties["scale"],
             ).start()
+
             sys.stdout.write("\rInitialised.    ")
             sys.stdout.flush()
+
+            # get sample start time
+
             if sample_id is not None:
                 sys.stdout.write("\rSearching for last fish...")
                 sys.stdout.flush()
+
                 start_time = self.project_info["samples"][plot][sample_id]["start_time"]
+
+                # clear queue and set stream to start time
                 with self.stream.lock:
                     while not self.stream.Q.empty():
                         self.stream.Q.get()
+
                     self.stream.stream.set(cv2.CAP_PROP_POS_MSEC, start_time * 1000)
-                    sys.stdout.write("\rFound last fish!!!              ")
-                    sys.stdout.flush()
-                    time.sleep(0.5)
-                    sys.stdout.write("\r")
-                    sys.stdout.flush()
+
+                sys.stdout.write("\rFound last fish!!!              ")
+                sys.stdout.flush()
+                time.sleep(0.5)
+                sys.stdout.write("\r")
+                sys.stdout.flush()
+
+            # start timer
+
+            if self.stream is not None:
+                self.timer = QTimer(self)
+                self.timer.timeout.connect(self.update_frame)
+                self.timer.start(1000 // (FPS * self.speed))
+                self.grabKeyboard()
+
+            # show video
+
             self.update_frame()
+
+            # pause video
+
             self.stream.paused = True
 
     def update_frame(self):
         if not self.stream.Q.empty() and not self.stream.paused:
+            # check if sample has ended
             self.sample_queue()
+
+            # set frames
+
             frame, self.stream.frame_time = self.stream.Q.get()
+
             self.current_frame = frame
+
+            # check if rectangle is drawn
+
             if self.pt1 and self.pt2 and not self.drawing:
+                # get points and draw
                 pt1 = (
                     int(self.pt1.x() / self.width() * frame.shape[1]),
                     int(self.pt1.y() / self.height() * frame.shape[0]),
@@ -203,10 +250,17 @@ class VideoPane(widgets.QLabel):
                     int(self.pt2.x() / self.width() * frame.shape[1]),
                     int(self.pt2.y() / self.height() * frame.shape[0]),
                 )
+
                 cv2.rectangle(frame, pt1, pt2, (0, 255, 0), 2)
+
+                # pause the video
                 self.stream.paused = True
+
+                # enter data
+
                 with self.stream.lock:
                     self.releaseKeyboard()
+
                     enter_data(
                         frame=frame,
                         data=self.stream.data,
@@ -217,11 +271,16 @@ class VideoPane(widgets.QLabel):
                         coordinates=(pt1[0], pt1[1], pt2[0], pt2[1]),
                         status_bar=self.obs_label,
                     )
+
                     self.main_window.update_tables()
 
+                # rest
                 self.pt1 = None
                 self.pt2 = None
                 self.grabKeyboard()
+
+            # scale and add frame to video pane
+
             qt_img = self.cv_to_qt(frame)
             self.original_img = qt_img
             scaled_img = qt_img.scaled(
@@ -229,11 +288,15 @@ class VideoPane(widgets.QLabel):
             )
             self.setPixmap(QPixmap.fromImage(scaled_img))
             self.adjustSize()
+
+            # update status bar
             formatted_time = self.calculate_time()
             self.time_label.setText(formatted_time)
             self.status_label.setText("Playing")
 
     def sample_queue(self):
+        # check if video is running
+
         if self.stream is not None:
             current_time = self.stream.frame_time / 1000
             plot = self.stream.plot_id
@@ -242,10 +305,15 @@ class VideoPane(widgets.QLabel):
                 self.project_info["samples"][plot][sample_id]["start_time"]
                 + self.project_info["sample_s"]
             )
+
+            # check if sample has ended
             if current_time >= end_time:
+                # prompt user to end sample
                 sample_prompt = samplePrompt()
                 sample_prompt.exec_()
+
                 if sample_prompt.result() == 1:
+                    # load next sample
                     self.project_info["samples"][plot][sample_id]["status"] = "complete"
                     self.stream.stop()
                     self.start_stream(self.stream_properties)
@@ -438,14 +506,63 @@ class MenuBar(widgets.QMenuBar):
                 json.dump(self.main_window.project_info, f)
 
     def sample_next(self):
+        queue = self.main_window.video.quque
+
         self.main_window.video.stream.stop()
-        self.main_window.video.start_stream(self.main_window.stream_properties)
+        self.main_window.video.start_stream(queue)
 
     def sample_previous(self):
-        pass
+        queue = self.main_window.video.quque
+
+        if queue is not None:
+            plot, sample_id = queue
+
+            # find sample id
+
+            sample_ids = list(self.main_window.project_info["samples"][plot].keys())
+            sample_index = sample_ids.index(sample_id)
+
+            if sample_index > 0:
+                sample_id = sample_ids[sample_index - 1]
+
+                self.main_window.video.stream.stop()
+                self.main_window.video.start_stream((plot, sample_id))
+        else:
+            dialog = widgets.QMessageBox()
+            dialog.setText("No sample loaded")
+            dialog
 
     def load_sample(self):
-        pass
+        dialog = widgets.QDialog()
+        dialog.setWindowTitle("Load Sample")
+        dialog.setGeometry(400, 400, 800, 800)
+        layout = widgets.QVBoxLayout()
+
+        samples = []
+        for plot in self.main_window.project_info["samples"].keys():
+            for sample in self.main_window.project_info["samples"][plot].keys():
+                samples.append((plot, sample))
+
+        samples_df = pd.DataFrame(samples, columns=["Plot", "Sample ID"])
+
+        table = behTable(samples_df)
+        layout.addWidget(table)
+
+        load_button = widgets.QPushButton("Load")
+        layout.addWidget(load_button)
+
+        def load_selected_sample():
+            selected_items = table.selectedItems()
+            if selected_items:
+                plot = selected_items[0].text()
+                sample_id = selected_items[1].text()
+                self.main_window.video.stream.stop()
+                self.main_window.video.start_stream((plot, sample_id))
+                dialog.accept()
+
+        load_button.clicked.connect(load_selected_sample)
+        dialog.setLayout(layout)
+        dialog.exec_()
 
     def view_data(self):
         if self.main_window.project_info is not None:
