@@ -14,34 +14,6 @@ os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
     QLibraryInfo.PluginsPath
 )
 
-# user prompt for resume
-
-
-class ResumeDialog(widgets.QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        self.setWindowTitle("Session")
-
-        layout = widgets.QFormLayout()
-
-        self.resume = widgets.QPushButton("Resume")
-        self.new = widgets.QPushButton("New")
-
-        layout.addRow("Resume", self.resume)
-        layout.addRow("New", self.new)
-
-        self.resume.clicked.connect(self.resume_session)
-        self.new.clicked.connect(self.new_session)
-
-        self.setLayout(layout)
-
-    def resume_session(self):
-        self.accept()
-
-    def new_session(self):
-        self.reject()
-
 
 # Define table class
 class Datatable(widgets.QTableWidget):
@@ -58,12 +30,36 @@ class Datatable(widgets.QTableWidget):
                 self.setItem(i, j, widgets.QTableWidgetItem(str(data.iloc[i, j])))
 
 
+# define prompt for sample
+
+
+class samplePrompt(widgets.QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle("Sample Ennder")
+
+        layout = widgets.QVBoxLayout()
+
+        self.next = widgets.QPushButton("Next")
+        self.cancel = widgets.QPushButton("Cancle")
+
+        layout.addWidget(self.next)
+        layout.addWidget(self.cancel)
+
+        self.next.clicked.connect(self.accept)
+        self.cancel.clicked.connect(self.reject)
+
+        self.setLayout(layout)
+
+
 # Define video class
 class VideoPane(widgets.QLabel):
     def __init__(self, project_info, stream_properties, status_bar):
         super().__init__()
 
         self.project_info = project_info
+        self.stream_properties = stream_properties
 
         self.status_bar = status_bar
 
@@ -124,66 +120,49 @@ class VideoPane(widgets.QLabel):
     def session(self):
         project_info = self.project_info
 
-        start_time = None
+        sample_id = None
+        plot = None
         file = None
         data = {}
 
-        # prompt user if they want to resume
+        # get data file
 
-        resume = ResumeDialog()
-        resume.exec_()
+        data_file = project_info["data_file"]
 
-        if resume.result() == 1:
-            # get data file
+        if os.path.exists(data_file):
+            with open(data_file, "r") as f:
+                data = json.load(f)
 
-            data_file = project_info["data_file"]
+        if project_info["type"] == "Individual":
+            # find next individual
 
-            if os.path.exists(data_file):
-                with open(data_file, "r") as f:
-                    data = json.load(f)
+            last_ind = list(data.keys())[-1]
 
-            if project_info["type"] == "Individual":
-                # find next individual
+            file = data[last_ind]["file"]
+            sample_id = data[last_ind]["plot_id"]
 
-                last_ind = list(data.keys())[-1]
+        else:
+            if project_info["sample_n"] > 0:
+                # find next sample
 
-                file = data[last_ind]["file"]
-                start_time = data[last_ind]["time_in"]
+                for plot in project_info["samples"].keys():
+                    for sample in project_info["samples"][plot].keys():
+                        if project_info["samples"][plot][sample]["status"] == "pending":
+                            file = project_info["samples"][plot][sample]["video"]
+                            sample_id = sample
+                            break
 
-            else:
-                if project_info["sample_n"] > 0:
-                    # find next sample
-
-                    for plot in project_info["samples"].keys():
-                        for sample in project_info["samples"][plot].keys():
-                            if (
-                                project_info["samples"][plot][sample]["status"]
-                                == "pending"
-                            ):
-                                file = project_info["samples"][plot][sample]["video"]
-                                start_time = project_info["samples"][plot][sample][
-                                    "start_time"
-                                ]
-                                break
-
-        return file, data, start_time
+        return file, data, plot, sample_id
 
     def start_stream(self, stream_properties):
-        video = None
-
-        file, data, start_time = self.session()
+        file, data, plot, sample_id = self.session()
 
         self.stream = None
 
         if file is not None:
-            # set deployment id
-            deployment_id = file.split("/")
-            deployment_id = deployment_id[-3:-1]
-            deployment_id = "_".join(deployment_id[::-1])
-
             # print parent file and file name
 
-            print(f"Deployment: {deployment_id}", f"File: {file}", sep="\n")
+            print(f"Sample: {sample_id}", f"File: {file}", sep="\n")
 
             # open the video
 
@@ -192,7 +171,8 @@ class VideoPane(widgets.QLabel):
 
             self.stream = VideoStream(
                 data=data,
-                deployment_id=deployment_id,
+                plot_id=plot,
+                sample_id=sample_id,
                 path=file,
                 useGPU=stream_properties["useGPU"],
                 detection=stream_properties["detection"],
@@ -203,9 +183,11 @@ class VideoPane(widgets.QLabel):
             sys.stdout.write("\rInitialised.    ")
             sys.stdout.flush()
 
-            if start_time is not None:
+            if sample_id is not None:
                 sys.stdout.write("\rSearching for last fish...")
                 sys.stdout.flush()
+
+                start_time = self.project_info["samples"][plot][sample_id]["start_time"]
 
                 with self.stream.lock:
                     # clear the queue
@@ -223,10 +205,13 @@ class VideoPane(widgets.QLabel):
                     sys.stdout.write("\r")
                     sys.stdout.flush()
 
-    def update_frame(self):
-        self.sample_queue()
+            self.update_frame()
+            self.stream.paused = True
 
+    def update_frame(self):
         if not self.stream.Q.empty() and not self.stream.paused:
+            self.sample_queue()
+
             frame, self.stream.frame_time = self.stream.Q.get()
 
             self.current_frame = frame
@@ -288,6 +273,27 @@ class VideoPane(widgets.QLabel):
             self.status_label.setText("Playing")
 
     def sample_queue(self):
+        if self.stream is not None:
+            current_time = self.stream.frame_time / 1000
+            plot = self.stream.plot_id
+            sample_id = self.stream.sample_id
+            end_time = (
+                self.project_info["samples"][plot][sample_id]["start_time"]
+                + self.project_info["sample_s"]
+            )
+
+            print(current_time, end_time)  # debug
+
+            if current_time >= end_time:
+                sample_prompt = samplePrompt()
+                sample_prompt.exec_()
+
+                if sample_prompt.result() == 1:
+                    self.project_info["samples"][plot][sample_id]["status"] = "complete"
+                    self.stream.stop()
+                    self.start_stream(self.stream_properties)
+                else:
+                    self.stream.paused = True
         pass
 
     def calculate_time(self):

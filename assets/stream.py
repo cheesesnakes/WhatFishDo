@@ -10,7 +10,8 @@ class VideoStream:
     def __init__(
         self,
         data,
-        deployment_id,
+        plot_id,
+        sample_id,
         path,
         detection,
         tracking,
@@ -22,7 +23,8 @@ class VideoStream:
         self.stream = cv2.VideoCapture(path, cv2.CAP_FFMPEG)
         self.frame_time = 0
         self.data = data
-        self.deployment_id = deployment_id
+        self.plot_id = plot_id
+        self.sample_id = sample_id
         self.path = path
         self.skip_seconds = skip_seconds
         self.threads = []
