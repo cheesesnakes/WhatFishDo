@@ -21,7 +21,7 @@ def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
 
     # welcome message
 
-    print("Fish Behavior Video Annotation Tool v0.1\n")
+    print("Fish Behavior Video Annotation Tool v2.0\n")
 
     print(
         f"Running with detection: {detection}, tracking {tracking}, and GPU:{useGPU}\n"

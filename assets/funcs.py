@@ -29,7 +29,7 @@ def cmdargs():
     )
 
     parser = argparse.ArgumentParser(
-        prog="Fish Behaviour Video Annotation Tool v0.1",
+        prog="Fish Behaviour Video Annotation Tool v2.0",
         formatter_class=argparse.RawTextHelpFormatter,
         epilog=epilog,
     )
