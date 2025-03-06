@@ -61,22 +61,19 @@ class projectDialog(widgets.QDialog):
 
         self.setWindowTitle("Project Selection")
 
-        layout = widgets.QFormLayout()
+        layout = widgets.QHBoxLayout()
 
         self.project = widgets.QLineEdit()
         self.project.setReadOnly(True)
 
-        self.select = widgets.QPushButton("Select Existing")
-        self.new_project = widgets.QPushButton("Create New")
+        self.select = widgets.QPushButton("Select")
         self.cancel = widgets.QPushButton("Cancel")
 
-        layout.addRow("Project:", self.project)
-        layout.addRow("Select", self.select)
-        layout.addRow("New Project", self.new_project)
-        layout.addRow("Cancel", self.cancel)
+        layout.addWidget(self.project)
+        layout.addWidget(self.select)
+        layout.addWidget(self.cancel)
 
         self.select.clicked.connect(self.select_project)
-        self.new_project.clicked.connect(self.init_project)
         self.cancel.clicked.connect(self.reject)
 
         self.setLayout(layout)
@@ -97,14 +94,6 @@ class projectDialog(widgets.QDialog):
             message.setText("Invalid Project. Please select a valid project file.")
             message.exec_()
             return
-
-    def init_project(self):
-        init = projectInit()
-        init.exec_()
-
-        if init.result() == 1:
-            self.project_info = init.project_info
-            self.accept()
 
 
 class projectInit(widgets.QDialog):

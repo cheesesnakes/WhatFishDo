@@ -506,12 +506,27 @@ class MenuBar(widgets.QMenuBar):
                 json.dump(self.main_window.project_info, f)
 
     def sample_next(self):
+        if self.main_window.project_info is None:
+            dialog = widgets.QMessageBox()
+            dialog.setText("No project loaded")
+            dialog.exec_()
+
+            return
+
         queue = self.main_window.video.quque
 
         self.main_window.video.stream.stop()
+
         self.main_window.video.start_stream(queue)
 
     def sample_previous(self):
+        if self.main_window.project_info is None:
+            dialog = widgets.QMessageBox()
+            dialog.setText("No project loaded")
+            dialog.exec_()
+
+            return
+
         queue = self.main_window.video.quque
 
         if queue is not None:
@@ -533,6 +548,13 @@ class MenuBar(widgets.QMenuBar):
             dialog
 
     def load_sample(self):
+        if self.main_window.project_info is None:
+            dialog = widgets.QMessageBox()
+            dialog.setText("No project loaded")
+            dialog.exec_()
+
+            return
+
         dialog = widgets.QDialog()
         dialog.setWindowTitle("Load Sample")
         dialog.setGeometry(400, 400, 800, 800)
