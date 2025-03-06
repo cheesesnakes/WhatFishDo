@@ -248,6 +248,9 @@ class projectInit(widgets.QDialog):
         self.sample_n = widgets.QSpinBox()
         self.sample_n.setMinimum(0)
 
+        self.sample_s = widgets.QSpinBox()
+        self.sample_s.setMinimum(0)
+
         self.init = widgets.QPushButton("Initialize")
         self.cancel = widgets.QPushButton("Cancel")
 
@@ -261,6 +264,7 @@ class projectInit(widgets.QDialog):
         layout.addRow("Replicates:", self.replicates)
         layout.addRow("Plots or Treatments:", self.plots)
         layout.addRow("Number of samples:", self.sample_n)
+        layout.addRow("Sample Size:", self.sample_s)
 
         layout.addRow("Initialize", self.init)
         layout.addRow("Cancel", self.cancel)
@@ -294,6 +298,7 @@ class projectInit(widgets.QDialog):
         self.project_info["replicates"] = self.replicates.value()
         self.project_info["plots"] = self.plots.value()
         self.project_info["sample_n"] = self.sample_n.value()
+        self.project_info["sample_s"] = self.sample_s.value()
 
         # hidden fields
         self.project_info["last_plot"] = ""
@@ -316,7 +321,7 @@ class projectInit(widgets.QDialog):
     def project_stats(self):
         if self.project_type.currentText() == "Individual":
             self.project_info["total_plots"] = 1
-            self.project_info["total_samples"] = self.samples.value()
+            self.project_info["total_samples"] = 0
             self.project_info["total_time"] = 0
             self.project_info["plot_info"] = None
 
@@ -442,7 +447,7 @@ class projectInit(widgets.QDialog):
 
                     # check if samples overlap
 
-                    duration = 2 * 60.0
+                    duration = self.sample_s.value()
 
                     for i in range(self.sample_n.value()):
                         for j in range(self.sample_n.value()):
@@ -469,6 +474,8 @@ class projectInit(widgets.QDialog):
 
                         video_found = False
 
+                        duration = self.sample_s.value()
+
                         for video in os.listdir(plot_info[plot]["path"]):
                             video_path = plot_info[plot]["path"] + "/" + video
 
@@ -487,8 +494,8 @@ class projectInit(widgets.QDialog):
 
                                 # adjust start time so sample is completely within video
 
-                                if vid_end - samples[plot][i]["start_time"] > 2 * 60:
-                                    samples[plot][i]["start_time"] = vid_end - 2 * 60
+                                if vid_end - samples[plot][i]["start_time"] > duration:
+                                    samples[plot][i]["start_time"] = vid_end - duration
 
                                 video_found = True
 

@@ -1,3 +1,4 @@
+from random import sample
 from assets.funcs import ResumeDialog, projectDialog, projectInit, session
 from unittest.mock import patch
 import os
@@ -101,6 +102,7 @@ def test_projectInit(qtbot):
     replicates = 5
     plots = 4
     sample_n = 10
+    sample_s = 120
 
     dialog.project_name.setText(project_name)
     dialog.project_type.setCurrentText(project_type)
@@ -112,6 +114,7 @@ def test_projectInit(qtbot):
     dialog.replicates.setValue(replicates)
     dialog.plots.setValue(plots)
     dialog.sample_n.setValue(sample_n)
+    dialog.sample_s.setValue(sample_s)
 
     with patch(
         "PyQt5.QtWidgets.QFileDialog.getSaveFileName",
