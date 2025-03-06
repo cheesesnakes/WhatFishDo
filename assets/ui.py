@@ -6,7 +6,7 @@ import time
 import pandas as pd
 from PyQt5 import QtWidgets as widgets
 from PyQt5.QtCore import Qt, QLibraryInfo, QTimer
-from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen
+from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen, QFont
 from assets.data import enter_data, time_out, predators, record_behaviour
 from assets.stream import VideoStream
 from assets.funcs import projectInit, projectDialog
@@ -212,7 +212,7 @@ class VideoPane(widgets.QLabel):
                         data=self.stream.data,
                         sizes=self.sizes,
                         file=self.stream.path,
-                        deployment_id=self.stream.deployment_id,
+                        deployment_id=self.stream.sample_id,
                         video=self.stream,
                         coordinates=(pt1[0], pt1[1], pt2[0], pt2[1]),
                         status_bar=self.obs_label,
@@ -432,7 +432,7 @@ class MenuBar(widgets.QMenuBar):
         dialog = widgets.QFileDialog()
         dialog.setFileMode(widgets.QFileDialog.AnyFile)
         dialog.exec_()
-        file = dialog.selectedFiles()
+        file = dialog.selectedFiles()[0]
         if file:
             with open(file, "w") as f:
                 json.dump(self.main_window.project_info, f)
@@ -448,38 +448,96 @@ class MenuBar(widgets.QMenuBar):
         pass
 
     def view_data(self):
-        data = self.main_window.ind_datatoPD()
-        dialog = widgets.QDialog()
-        layout = widgets.QVBoxLayout()
-        rows = len(data)
-        table = indTable(data, rows)
-        layout.addWidget(table)
-        dialog.setLayout(layout)
-        dialog.exec_()
+        if self.main_window.project_info is not None:
+            data = self.main_window.ind_datatoPD()
+            dialog = widgets.QDialog()
+            dialog.setWindowTitle("Data")
+            dialog.setGeometry(400, 400, 800, 800)
+            layout = widgets.QVBoxLayout()
+            rows = len(data)
+            table = indTable(data, rows)
+            layout.addWidget(table)
+            dialog.setLayout(layout)
+            dialog.exec_()
+        else:
+            dialog = widgets.QMessageBox()
+            dialog.setText("No project loaded")
+            dialog.exec_()
 
     def view_project(self):
-        dialog = widgets.QDialog()
-        layout = widgets.QVBoxLayout()
-        for key, value in self.main_window.project_info.items():
-            if key != "samples" or key != "plot_info":
-                layout.addWidget(widgets.QLabel(f"{key}: {value}"))
-        dialog.setLayout(layout)
-        dialog.exec_()
+        if self.main_window.project_info is not None:
+            dialog = widgets.QDialog()
+            dialog.setWindowTitle("Project Info")
+            dialog.setGeometry(400, 400, 800, 800)
+            layout = widgets.QVBoxLayout()
+
+            text = ""
+
+            for key, value in self.main_window.project_info.items():
+                if key != "samples" and key != "plot_info":
+                    text += f"{key}: {value}\n"
+
+            label = widgets.QLabel(text)
+            label.setWordWrap(True)
+            label.setFont(QFont("Arial", 12))
+            label.setAlignment(Qt.AlignLeft)
+            layout.addWidget(label)
+
+            dialog.setLayout(layout)
+            dialog.exec_()
+        else:
+            dialog = widgets.QMessageBox()
+            dialog.setText("No project loaded")
+            dialog.exec_()
 
     def view_behaviour(self):
-        dialog = widgets.QDialog()
-        layout = widgets.QVBoxLayout()
-        for key, value in self.main_window.behaviours.items():
-            layout.addWidget(widgets.QLabel(f"{key}: {value}"))
-        dialog.setLayout(layout)
-        dialog.exec_()
+        if self.main_window.project_info is not None:
+            dialog = widgets.QDialog()
+            dialog.setWindowTitle("Behaviours")
+            dialog.setGeometry(400, 400, 800, 800)
+            layout = widgets.QVBoxLayout()
+
+            behaviours = self.main_window.video.behaviours
+
+            behaviours = pd.DataFrame(behaviours).T
+
+            behaviours.columns = ["Behaviour", "Type", "Description"]
+
+            # create a table
+
+            table = behTable(behaviours)
+
+            layout.addWidget(table)
+            dialog.setLayout(layout)
+            dialog.exec_()
+        else:
+            dialog = widgets.QMessageBox()
+            dialog.setText("No project loaded")
+            dialog.exec_()
 
     def view_size(self):
-        dialog = widgets.QDialog()
-        layout = widgets.QVBoxLayout()
-        for key, value in self.main_window.sizes.items():
-            layout.addWidget(widgets.QLabel(f"{key}: {value}"))
-        dialog.setLayout(layout)
+        if self.main_window.project_info is not None:
+            dialog = widgets.QDialog()
+            dialog.setWindowTitle("Sizes")
+            dialog.setGeometry(400, 400, 50, 400)
+            layout = widgets.QVBoxLayout()
+
+            text = ""
+
+            for size in self.main_window.video.sizes:
+                text += f"{size}, "
+
+            label = widgets.QLabel(text)
+            label.setWordWrap(True)
+            label.setFont(QFont("Arial", 12))
+            label.setAlignment(Qt.AlignCenter)
+            layout.addWidget(label)
+            dialog.setLayout(layout)
+            dialog.exec_()
+        else:
+            dialog = widgets.QMessageBox()
+            dialog.setText("No project loaded")
+            dialog.exec_()
 
 
 # Define main window class
@@ -636,4 +694,7 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         table_container.addWidget(self.tab1)
         table_container.addWidget(self.tab2)
 
-        self.splitter.replaceWidget(1, table_container)
+        table_widget = widgets.QWidget()
+        table_widget.setLayout(table_container)
+
+        self.splitter.replaceWidget(1, table_widget)

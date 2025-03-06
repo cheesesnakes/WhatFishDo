@@ -6,7 +6,7 @@
 # setup imports
 import sys
 import os
-from assets.funcs import cmdargs, load_project
+from assets.funcs import cmdargs
 import time
 from assets.ui import MainWindow
 from PyQt5 import QtWidgets
