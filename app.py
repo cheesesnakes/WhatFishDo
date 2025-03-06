@@ -7,6 +7,7 @@
 import sys
 import os
 import cv2
+import json
 from assets.funcs import cmdargs, session, load_project
 from assets.stream import VideoStream
 import time
@@ -40,6 +41,20 @@ def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
     # start or resume session
 
     file, data, start_time = session(project_info)
+
+    global data_file
+    global sizes
+    global behaviours
+    global data_folder
+
+    data_file = project_info["data_file"]
+    data_folder = project_info["data_folder"]
+
+    with open(project_info["size_file"], "r") as f:
+        sizes = json.load(f)
+
+    with open(project_info["behaviour_file"], "r") as f:
+        behaviours = json.load(f)
 
     video = None
 
