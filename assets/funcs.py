@@ -85,18 +85,26 @@ def session(project_info):
     resume = ResumeDialog()
     resume.exec_()
 
+    # get data file
+
+    data_file = project_info["data_file"]
+
     # load data if it exists
 
     data = {}
 
-    if os.path.exists("data.json"):
-        with open("data.json", "r") as f:
+    if os.path.exists(data_file):
+        with open(data_file, "r") as f:
             data = json.load(f)
 
     if resume.result() == 1:
         if project_info["type"] == "Individual":
-            pass
             # find next individual
+
+            last_ind = list(data.keys())[-1]
+
+            file = data[last_ind]["file"]
+            start_time = data[last_ind]["time_in"]
 
         else:
             if project_info["sample_n"] > 0:
