@@ -31,10 +31,6 @@ def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
 
     app = QtWidgets.QApplication([])
 
-    # project loader
-
-    project_info = load_project()
-
     # set stream properties
 
     stream_properties = {
@@ -54,6 +50,7 @@ def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
 
     # start the main MainWindow
 
+    project_info = None
     window = MainWindow(project_info, stream_properties)
     window.show()
     sys.exit(app.exec_())
