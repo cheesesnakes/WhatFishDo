@@ -42,6 +42,8 @@ def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
         "tracking": tracking,
         "useGPU": useGPU,
         "scale": scale,
+        "sample_id": None,
+        "Plot": None,
     }
     # initialize the process
 
