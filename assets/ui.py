@@ -1,6 +1,7 @@
 import json
 import sys
 import os
+from tkinter import N
 import cv2
 import pandas as pd
 from PyQt5 import QtWidgets as widgets
@@ -30,7 +31,7 @@ class Datatable(widgets.QTableWidget):
 
 # Define video class
 class VideoPane(widgets.QLabel):
-    def __init__(self, project_info, video, status_bar):
+    def __init__(self, video, project_info, status_bar):
         super().__init__()
         self.stream = video
         self.status_bar = status_bar
@@ -216,12 +217,12 @@ class VideoPane(widgets.QLabel):
 
     def loadBehaviour(self, project_info):
         if project_info is not None:
-            with open(project_info["behaviours_file"], "r") as f:
+            with open(project_info["behaviour_file"], "r") as f:
                 self.behaviours = json.load(f)
 
     def loadsSize(self, project_info):
         if project_info is not None:
-            with open(project_info["sizes_file"], "r") as f:
+            with open(project_info["size_file"], "r") as f:
                 sizes = json.load(f)
                 self.sizes = sizes["sizes"]
 
@@ -356,8 +357,9 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         sys.stdout.write("\rQuitting...")
 
         if self.video is not None:
-            self.video.stream.pause = False
-            self.video.stream.stop()
+            if self.video.stream is not None:
+                self.video.stream.pause = False
+                self.video.stream.stop()
 
         sys.stdout.flush()
 

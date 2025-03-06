@@ -7,7 +7,6 @@
 import sys
 import os
 import cv2
-import json
 from assets.funcs import cmdargs, session, load_project
 from assets.stream import VideoStream
 import time
