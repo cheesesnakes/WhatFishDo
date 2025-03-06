@@ -79,25 +79,22 @@ class FileDialog(widgets.QDialog):
 def session(project_info):
     start_time = None
     file = None
+    data = {}
 
     # prompt user if they want to resume
 
     resume = ResumeDialog()
     resume.exec_()
 
-    # get data file
-
-    data_file = project_info["data_file"]
-
-    # load data if it exists
-
-    data = {}
-
-    if os.path.exists(data_file):
-        with open(data_file, "r") as f:
-            data = json.load(f)
-
     if resume.result() == 1:
+        # get data file
+
+        data_file = project_info["data_file"]
+
+        if os.path.exists(data_file):
+            with open(data_file, "r") as f:
+                data = json.load(f)
+
         if project_info["type"] == "Individual":
             # find next individual
 
@@ -436,9 +433,12 @@ class projectInit(widgets.QDialog):
                     # pick random times between start and end
 
                     for i in range(self.sample_n.value()):
-                        samples[plot][i] = {}
-                        samples[plot][i]["start_time"] = random.uniform(start, end)
-                        samples[plot][i]["status"] = "pending"
+                        sample_id = str.join("_", [plot, str(i)])
+                        samples[plot][sample_id] = {}
+                        samples[plot][sample_id]["start_time"] = random.uniform(
+                            start, end
+                        )
+                        samples[plot][sample_id]["status"] = "pending"
 
                     # check if samples overlap
 
@@ -449,14 +449,16 @@ class projectInit(widgets.QDialog):
                             if i == j:
                                 continue
 
+                            sample_id_i = str.join("_", [plot, str(i)])
+                            sample_id_j = str.join("_", [plot, str(j)])
                             if (
                                 abs(
-                                    samples[plot][i]["start_time"]
-                                    - samples[plot][j]["start_time"]
+                                    samples[plot][sample_id_i]["start_time"]
+                                    - samples[plot][sample_id_j]["start_time"]
                                 )
                                 < duration
                             ):
-                                samples[plot][j]["start_time"] -= duration
+                                samples[plot][sample_id_j]["start_time"] -= duration
 
                     # find sample video path
 
