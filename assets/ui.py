@@ -73,26 +73,38 @@ class samplePrompt(widgets.QDialog):
 
 
 class VideoPane(widgets.QLabel):
-    def __init__(self, project_info, stream_properties, status_bar):
+    def __init__(self, main_window):
         super().__init__()
-        self.project_info = project_info
-        self.stream_properties = stream_properties
-        self.status_bar = status_bar
+
+        self.main_window = main_window
+        self.project_info = main_window.project_info
+        self.stream_properties = main_window.stream_properties
+        self.status_bar = main_window.status_bar
+
         self.speed = DEFAULT_SPEED
         self.MouseX = 0
         self.MouseY = 0
+
         self.pt1 = None
         self.pt2 = None
         self.drawing = False
+
         self.setMouseTracking(True)
         self.setSizePolicy(widgets.QSizePolicy.Expanding, widgets.QSizePolicy.Expanding)
         self.adjustSize()
         self.setAlignment(Qt.AlignCenter)
         self.original_img = QImage(640, 480, QImage.Format_RGB888)
+
         self.init_status_bar()
-        self.loadBehaviour(project_info)
-        self.loadsSize(project_info)
-        self.start_stream(stream_properties)
+
+        self.loadBehaviour()
+        self.loadsSize()
+
+        if self.project_info is not None:
+            self.start_stream()
+        else:
+            self.stream = None
+
         if self.stream is not None:
             self.timer = QTimer(self)
             self.timer.timeout.connect(self.update_frame)
@@ -140,7 +152,9 @@ class VideoPane(widgets.QLabel):
                             break
         return file, data, plot, sample_id
 
-    def start_stream(self, stream_properties):
+    def start_stream(self):
+        stream_properties = self.stream_properties
+
         file, data, plot, sample_id = self.session()
         self.stream = None
         if file is not None:
@@ -203,6 +217,8 @@ class VideoPane(widgets.QLabel):
                         coordinates=(pt1[0], pt1[1], pt2[0], pt2[1]),
                         status_bar=self.obs_label,
                     )
+                    self.main_window.update_tables()
+
                 self.pt1 = None
                 self.pt2 = None
                 self.grabKeyboard()
@@ -289,12 +305,14 @@ class VideoPane(widgets.QLabel):
                 self.pt2.y() - self.pt1.y(),
             )
 
-    def loadBehaviour(self, project_info):
+    def loadBehaviour(self):
+        project_info = self.project_info
         if project_info is not None:
             with open(project_info["behaviour_file"], "r") as f:
                 self.behaviours = json.load(f)
 
-    def loadsSize(self, project_info):
+    def loadsSize(self):
+        project_info = self.project_info
         if project_info is not None:
             with open(project_info["size_file"], "r") as f:
                 sizes = json.load(f)
@@ -330,6 +348,7 @@ class VideoPane(widgets.QLabel):
                 self.stream.skip(-10)
         elif event.key() == Qt.Key_Z:
             time_out(self.stream, self.obs_label)
+            self.main_window.update_tables()
         elif event.key() == Qt.Key_P:
             predators(self.stream, self.current_frame, self.sizes, self.obs_label)
         elif event.key() == Qt.Key_C:
@@ -343,6 +362,8 @@ class VideoPane(widgets.QLabel):
             key = event.text()
             if key in self.behaviours.keys():
                 record_behaviour(self.stream, key, self.obs_label, self.behaviours)
+                self.main_window.update_tables()
+
         self.update()
 
 
@@ -379,24 +400,20 @@ class MenuBar(widgets.QMenuBar):
         dialog.exec_()
         if dialog.result() == 1:
             self.main_window.project_info = dialog.project_info
-            self.main_window.video = VideoPane(
-                self.main_window.project_info,
-                self.main_window.stream_properties,
-                self.main_window.status_bar,
-            )
+            self.main_window.video = VideoPane(self.main_window)
             self.main_window.splitter.replaceWidget(0, self.main_window.video)
+
+            self.main_window.update_tables()
 
     def load_project(self):
         dialog = projectDialog()
         dialog.exec_()
         if dialog.result() == 1:
             self.main_window.project_info = dialog.project_info
-            self.main_window.video = VideoPane(
-                self.main_window.project_info,
-                self.main_window.stream_properties,
-                self.main_window.status_bar,
-            )
+            self.main_window.video = VideoPane(self.main_window)
             self.main_window.splitter.replaceWidget(0, self.main_window.video)
+
+            self.main_window.update_tables()
 
     def load_video(self):
         dialog = widgets.QFileDialog()
@@ -406,8 +423,10 @@ class MenuBar(widgets.QMenuBar):
         if file:
             self.main_window.video.stream.path = file
             self.main_window.video.start()
-            self.main_window.stream.paused = True
             self.main_window.update_frame()
+            self.main_window.video.stream.paused = True
+
+            self.main_window.update_tables()
 
     def save_project(self):
         dialog = widgets.QFileDialog()
@@ -465,10 +484,11 @@ class MenuBar(widgets.QMenuBar):
 
 # Define main window class
 class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
-    def __init__(self, project_info, stream_properties, tableColumns=3, tableRows=3):
+    def __init__(self, project_info, stream_properties):
         super().__init__()
 
         self.project_info = project_info
+        self.stream_properties = stream_properties
 
         self.setWindowTitle("WhatFishDo")
         self.setGeometry(50, 50, 1280, 720)
@@ -488,14 +508,20 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         self.splitter = widgets.QSplitter(Qt.Horizontal)
 
         # Left Panel (Video)
-        self.video = VideoPane(project_info, stream_properties, self.status_bar)
+        self.video = VideoPane(self)
         self.splitter.addWidget(self.video)
 
         # Right Panel (Tables)
-        self.ind_data = self.ind_datatoPD()
+
+        if project_info is not None:
+            self.ind_data = self.ind_datatoPD()
+            self.beh_data = self.beh_datatoPD()
+        else:
+            self.ind_data = pd.DataFrame()
+            self.beh_data = pd.DataFrame()
+
         table_container = widgets.QVBoxLayout()
         self.tab1 = indTable(self.ind_data)
-        self.beh_data = self.beh_datatoPD()
         self.tab2 = behTable(self.beh_data)
         table_container.addWidget(self.tab1)
         table_container.addWidget(self.tab2)
@@ -599,3 +625,15 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         df = pd.DataFrame(data)
 
         return df
+
+    def update_tables(self):
+        self.ind_data = self.ind_datatoPD()
+        self.beh_data = self.beh_datatoPD()
+        self.tab1 = indTable(self.ind_data)
+        self.tab2 = behTable(self.beh_data)
+
+        table_container = widgets.QVBoxLayout()
+        table_container.addWidget(self.tab1)
+        table_container.addWidget(self.tab2)
+
+        self.splitter.replaceWidget(1, table_container)
