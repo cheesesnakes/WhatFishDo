@@ -5,7 +5,7 @@ import pandas as pd
 from PyQt5 import QtWidgets as widgets
 from PyQt5.QtCore import Qt, QLibraryInfo, QTimer
 from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen
-from data import enter_data, time_out, predators, record_behaviour
+from assets.data import enter_data, time_out, predators, record_behaviour
 import json
 
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
@@ -26,6 +26,7 @@ class Datatable(widgets.QTableWidget):
             for j in range(columns):
                 self.setItem(i, j, widgets.QTableWidgetItem(str(data.iloc[i, j])))
 
+
 # Define video class
 class VideoPane(widgets.QLabel):
     def __init__(self, video, status_bar):
@@ -45,7 +46,6 @@ class VideoPane(widgets.QLabel):
         self.obs_label = widgets.QLabel("None")
         self.speed_label = widgets.QLabel("Speed: 1")
 
-
         status_layout.addWidget(self.cursor_label)
         status_layout.addWidget(self.time_label)
         status_layout.addWidget(self.status_label)
@@ -54,7 +54,6 @@ class VideoPane(widgets.QLabel):
 
         # Add the status widget to the status bar
         self.status_bar.addPermanentWidget(status_widget)
-
 
         self.speed = 1
 
@@ -73,7 +72,7 @@ class VideoPane(widgets.QLabel):
 
         self.setSizePolicy(widgets.QSizePolicy.Expanding, widgets.QSizePolicy.Expanding)
         self.adjustSize()
-        self.setAlignment(Qt.AlignCenter)
+        self.setAlignment(Qt.AlignCenter)  # type: ignore
 
         # Placeholder image before video starts
         self.original_img = QImage(640, 480, QImage.Format_RGB888)
@@ -81,26 +80,24 @@ class VideoPane(widgets.QLabel):
         # Timer for updating video frames
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_frame)
-        self.timer.start(1000 // (60*self.speed))  # 60 FPS refresh rate
+        self.timer.start(1000 // (60 * self.speed))  # 60 FPS refresh rate
 
     def update_frame(self):
         if not self.stream.Q.empty() and not self.stream.paused:
             frame, self.stream.frame_time = self.stream.Q.get()
-            
+
             self.current_frame = frame
 
             # data entry
             if self.pt1 and self.pt2 and not self.drawing:
-
                 # calculate position and size of rectangle based on curent Qlabel size
 
-                pt1 = ( # Top left corner
-                    
+                pt1 = (  # Top left corner
                     int(self.pt1.x() / self.width() * frame.shape[1]),
                     int(self.pt1.y() / self.height() * frame.shape[0]),
                 )
 
-                pt2 = ( # Bottom right corner
+                pt2 = (  # Bottom right corner
                     int(self.pt2.x() / self.width() * frame.shape[1]),
                     int(self.pt2.y() / self.height() * frame.shape[0]),
                 )
@@ -117,19 +114,18 @@ class VideoPane(widgets.QLabel):
                 self.stream.paused = True
 
                 with self.stream.lock:
-
                     self.releaseKeyboard()
 
                     enter_data(
-                            frame=frame,
-                            data=self.stream.data,
-                            sizes = self.sizes,
-                            file=self.stream.path,
-                            deployment_id=self.stream.deployment_id,
-                            video=self.stream,
-                            coordinates=(pt1[0], pt1[1], pt2[0], pt2[1]),
-                            status_bar = self.obs_label
-                        )
+                        frame=frame,
+                        data=self.stream.data,
+                        sizes=self.sizes,
+                        file=self.stream.path,
+                        deployment_id=self.stream.deployment_id,
+                        video=self.stream,
+                        coordinates=(pt1[0], pt1[1], pt2[0], pt2[1]),
+                        status_bar=self.obs_label,
+                    )
 
                 self.pt1 = None
                 self.pt2 = None
@@ -149,7 +145,6 @@ class VideoPane(widgets.QLabel):
             self.status_label.setText("Playing")
 
     def calculate_time(self):
-
         time = self.stream.frame_time
 
         # conver milliseconds into hours, minutes and seconds
@@ -162,6 +157,7 @@ class VideoPane(widgets.QLabel):
         # display as HH:MM:SS
 
         return f"{hours:02}:{minutes:02}:{seconds:02}:{milliseconds:03}"
+
     def cv_to_qt(self, img):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         return QImage(img.data, img.shape[1], img.shape[0], QImage.Format_RGB888)
@@ -177,11 +173,11 @@ class VideoPane(widgets.QLabel):
 
     def mousePressEvent(self, event):
         """Record the position of the mouse when clicked"""
-        
+
         self.grabKeyboard()
 
         self.pt1 = event.pos()
-        self.pt2 = event.pos()        
+        self.pt2 = event.pos()
         self.drawing = True
         self.update()
 
@@ -197,7 +193,7 @@ class VideoPane(widgets.QLabel):
     def mouseReleaseEvent(self, event):
         """Record the position of the mouse when released"""
         self.pt2 = event.pos()
-        
+
         self.drawing = False
         self.update()
 
@@ -214,25 +210,24 @@ class VideoPane(widgets.QLabel):
                 self.pt2.x() - self.pt1.x(),
                 self.pt2.y() - self.pt1.y(),
             )
-    
+
     def loadBehaviour(self):
         if os.path.exists("behaviours.json"):
             with open("behaviours.json", "r") as f:
                 self.behaviors = json.load(f)
         else:
             raise FileNotFoundError("behaviours.json file not found")
-        
+
     def loadsSize(self):
         if os.path.exists("sizes.json"):
             with open("sizes.json", "r") as f:
                 sizes_file = json.load(f)
         else:
             raise FileNotFoundError("size.json file not found")
-        
+
         self.sizes = sizes_file["sizes"]
 
     def keyPressEvent(self, event):
-
         if event.key() == Qt.Key_Space:
             self.stream.paused = not self.stream.paused
             self.status_label.setText("Paused" if self.stream.paused else "Playing")
@@ -240,47 +235,40 @@ class VideoPane(widgets.QLabel):
         elif event.key() == Qt.Key_J:
             # slow down video
             self.speed = max(0.5, self.speed - 0.5)
-            self.timer.setInterval(1000 // int(60*self.speed))
+            self.timer.setInterval(1000 // int(60 * self.speed))
             self.speed_label.setText(f"Speed: {self.speed}")
-        
+
         elif event.key() == Qt.Key_K:
             # speed up video
             self.speed = min(4, self.speed + 0.5)
-            self.timer.setInterval(1000 // int(60*self.speed))
+            self.timer.setInterval(1000 // int(60 * self.speed))
             self.speed_label.setText(f"Speed: {self.speed}")
-            
-        elif event.key() == Qt.Key_Right:
 
+        elif event.key() == Qt.Key_Right:
             with self.stream.lock:
-    
                 self.stream.skip(1)
 
         elif event.key() == Qt.Key_Left:
-
             with self.stream.lock:
-                
                 while not self.stream.Q.empty():
                     self.stream.Q.get()
-                
+
                 self.stream.skip(-1)
 
         elif event.key() == Qt.Key_Up:
             with self.stream.lock:
-
                 self.stream.skip(10)
 
         elif event.key() == Qt.Key_Down:
-            
             with self.stream.lock:
-
                 while not self.stream.Q.empty():
                     self.stream.Q.get()
 
             self.stream.skip(-10)
-        
+
         elif event.key() == Qt.Key_Z:
             time_out(self.stream, self.obs_label)
-        
+
         elif event.key() == Qt.Key_P:
             predators(self.stream, self.current_frame, self.sizes, self.obs_label)
 
@@ -292,10 +280,9 @@ class VideoPane(widgets.QLabel):
 
         elif event.key() == Qt.Key_Q:
             sys.exit(0)
-        
+
         # record behaviour
         else:
-
             # convert key to string
             key = event.text()
 
@@ -303,7 +290,7 @@ class VideoPane(widgets.QLabel):
 
             if key in self.behaviors.keys():
                 record_behaviour(self.stream, key, self.obs_label, self.behaviors)
-        
+
         self.update()
 
 
@@ -317,7 +304,7 @@ class MenuBar(widgets.QMenuBar):
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(widgets.qApp.quit)
         file_menu.addAction(exit_action)
-        
+
         self.addMenu("Edit")
         self.addMenu("View")
 
@@ -339,7 +326,7 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
 
         # Status Bar
         self.status_bar = self.statusBar()
-        
+
         # Main Content Layout
         self.splitter = widgets.QSplitter(Qt.Horizontal)
 
@@ -376,6 +363,6 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         sys.stdout.flush()
 
         event.accept()
-    
+
     def datatoPD(self, data):
         return pd.DataFrame(data).T

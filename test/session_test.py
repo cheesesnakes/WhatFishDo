@@ -1,7 +1,8 @@
-from funcs import ResumeDialog, projectDialog, projectInit, session
+from assets.funcs import ResumeDialog, projectDialog, projectInit, session
 from unittest.mock import patch
 import os
 import json
+
 
 def test_resumeDialog(qtbot):
     dialog = ResumeDialog()
@@ -29,7 +30,6 @@ def test_resumeDialog(qtbot):
 
 
 def test_projectDialog(qtbot):
-
     dialog = projectDialog()
     dialog.show()
 
@@ -51,7 +51,7 @@ def test_projectDialog(qtbot):
 
     assert dialog.isVisible() is True
 
-    project_path = "./project.json"
+    project_path = "./data/project.json"
 
     with patch(
         "PyQt5.QtWidgets.QFileDialog.getOpenFileName",
@@ -67,13 +67,14 @@ def test_projectDialog(qtbot):
 
     dialog.show()
 
+
 def test_projectInit(qtbot):
     dialog = projectInit()
     dialog.show()
 
     qtbot.addWidget(dialog)
 
-    # check if the dialog launches as expected  
+    # check if the dialog launches as expected
 
     assert dialog.isVisible() is True
 
@@ -92,7 +93,7 @@ def test_projectInit(qtbot):
 
     project_name = "Chapter 4"
     project_type = "Plot"
-    project_path = "./videos"
+    project_path = "./data/videos"
     replicates = 5
     plots = 4
     sample_n = 10
@@ -116,29 +117,35 @@ def test_projectInit(qtbot):
 
     assert os.path.exists("project.json") is True
 
-def test_Session_new():
 
+def test_Session_new():
     project_info = None
 
-    with patch.object(ResumeDialog, "exec_"), patch.object(ResumeDialog, "result", return_value=0):
+    with (
+        patch.object(ResumeDialog, "exec_"),
+        patch.object(ResumeDialog, "result", return_value=0),
+    ):
         file, data, start_time = session(project_info)
-    
+
     assert file is None
     assert isinstance(data, dict)
     assert start_time is None
 
-def test_Session_resume():
 
+def test_Session_resume():
     if os.path.exists("project.json") is False:
         test_projectInit()
     else:
         # load project.json
         with open("project.json", "r") as file:
             project_info = json.load(file)
-    
-    with patch.object(ResumeDialog, "exec_"), patch.object(ResumeDialog, "result", return_value=1):
+
+    with (
+        patch.object(ResumeDialog, "exec_"),
+        patch.object(ResumeDialog, "result", return_value=1),
+    ):
         file, data, start_time = session(project_info)
-    
+
     assert file is not None
     assert isinstance(data, dict)
     assert start_time is not None

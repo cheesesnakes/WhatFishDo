@@ -3,15 +3,15 @@
 # Processing video
 # requirements
 
+# setup imports
+import sys
 import os
 import cv2
-from funcs import cmdargs, session, load_project
-from stream import VideoStream
-import sys
+from assets.funcs import cmdargs, session, load_project
+from assets.stream import VideoStream
 import time
-from ui import MainWindow
+from assets.ui import MainWindow
 from PyQt5 import QtWidgets
-import json
 
 
 def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
@@ -35,29 +35,15 @@ def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
 
     # project loader
 
-    if not Test:
-        project_info = load_project()
-
-    else:
-
-        with open("project.json", "r") as f:
-            project_info = json.load(f)
+    project_info = load_project()
 
     # start or resume session
 
-    if not Test:
-        file, data, start_time = session(project_info)
+    file, data, start_time = session(project_info)
 
-    else:
-
-        file = "/home/cheesesnakes/Storage/files/Shawn/Work/PhD/Thesis/chapter-4/Analysis/video-annotation/videos/20250127/positive-control/GX030262.MP4"
-        start_time = 0
-
-        with open("data.json", "r") as f:
-            data = json.load(f)
+    video = None
 
     if file is not None:
-
         # set deployment id
         deployment_id = file.split("/")
         deployment_id = deployment_id[-3:-1]
@@ -85,7 +71,7 @@ def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
         sys.stdout.write("\rInitialised.    ")
         sys.stdout.flush()
 
-        if start_time > 0:
+        if start_time is not None:
             sys.stdout.write("\rSearching for last fish...")
             sys.stdout.flush()
 

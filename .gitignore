@@ -1,11 +1,5 @@
 .env
 __pycache__/
-data.json
-fish_images/
-videos
-predators/
-predator.json
-model*
-chapter*
-*.png
+data/
+.vscode/
 *.json
