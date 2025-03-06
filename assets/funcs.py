@@ -526,4 +526,4 @@ def load_project():
     if project.result() == 1:
         return project.project_info
     else:
-        sys.exit()
+        return None

@@ -1,3 +1,4 @@
+import json
 import sys
 import os
 import cv2
@@ -6,7 +7,6 @@ from PyQt5 import QtWidgets as widgets
 from PyQt5.QtCore import Qt, QLibraryInfo, QTimer
 from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen
 from assets.data import enter_data, time_out, predators, record_behaviour
-import json
 
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
     QLibraryInfo.PluginsPath
@@ -18,7 +18,8 @@ class Datatable(widgets.QTableWidget):
     def __init__(self, data, columns=3, rows=3):
         super().__init__(rows, columns)
         self.setHorizontalHeaderLabels(data.columns)
-        self.populate_table(data, rows, columns)
+        if not data.empty:
+            self.populate_table(data, rows, columns)
         self.horizontalHeader().setSectionResizeMode(widgets.QHeaderView.Stretch)
 
     def populate_table(self, data, rows, columns):
@@ -29,7 +30,7 @@ class Datatable(widgets.QTableWidget):
 
 # Define video class
 class VideoPane(widgets.QLabel):
-    def __init__(self, video, status_bar):
+    def __init__(self, project_info, video, status_bar):
         super().__init__()
         self.stream = video
         self.status_bar = status_bar
@@ -61,14 +62,12 @@ class VideoPane(widgets.QLabel):
         self.MouseY = 0
         self.setMouseTracking(True)
 
-        self.grabKeyboard()
-
         self.pt1 = None
         self.pt2 = None
         self.drawing = False
 
-        self.loadBehaviour()
-        self.loadsSize()
+        self.loadBehaviour(project_info)
+        self.loadsSize(project_info)
 
         self.setSizePolicy(widgets.QSizePolicy.Expanding, widgets.QSizePolicy.Expanding)
         self.adjustSize()
@@ -78,9 +77,13 @@ class VideoPane(widgets.QLabel):
         self.original_img = QImage(640, 480, QImage.Format_RGB888)
 
         # Timer for updating video frames
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_frame)
-        self.timer.start(1000 // (60 * self.speed))  # 60 FPS refresh rate
+
+        if video is not None:
+            self.timer = QTimer(self)
+            self.timer.timeout.connect(self.update_frame)
+            self.timer.start(1000 // (60 * self.speed))  # 60 FPS refresh rate
+
+            self.grabKeyboard()
 
     def update_frame(self):
         if not self.stream.Q.empty() and not self.stream.paused:
@@ -211,21 +214,16 @@ class VideoPane(widgets.QLabel):
                 self.pt2.y() - self.pt1.y(),
             )
 
-    def loadBehaviour(self):
-        if os.path.exists("behaviours.json"):
-            with open("behaviours.json", "r") as f:
-                self.behaviors = json.load(f)
-        else:
-            raise FileNotFoundError("behaviours.json file not found")
+    def loadBehaviour(self, project_info):
+        if project_info is not None:
+            with open(project_info["behaviours_file"], "r") as f:
+                self.behaviours = json.load(f)
 
-    def loadsSize(self):
-        if os.path.exists("sizes.json"):
-            with open("sizes.json", "r") as f:
-                sizes_file = json.load(f)
-        else:
-            raise FileNotFoundError("size.json file not found")
-
-        self.sizes = sizes_file["sizes"]
+    def loadsSize(self, project_info):
+        if project_info is not None:
+            with open(project_info["sizes_file"], "r") as f:
+                sizes = json.load(f)
+                self.sizes = sizes["sizes"]
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Space:
@@ -311,7 +309,7 @@ class MenuBar(widgets.QMenuBar):
 
 # Define main window class
 class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
-    def __init__(self, data, video, tableColumns=3, tableRows=3):
+    def __init__(self, project_info, data, video, tableColumns=3, tableRows=3):
         super().__init__()
         self.setWindowTitle("WhatFishDo")
         self.setGeometry(50, 50, 1280, 720)
@@ -331,7 +329,7 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         self.splitter = widgets.QSplitter(Qt.Horizontal)
 
         # Left Panel (Video)
-        self.video = VideoPane(video, self.status_bar)
+        self.video = VideoPane(video, project_info, self.status_bar)
         self.splitter.addWidget(self.video)
 
         # Right Panel (Tables)
@@ -357,8 +355,9 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         sys.stdout.flush()
         sys.stdout.write("\rQuitting...")
 
-        self.video.stream.pause = False
-        self.video.stream.stop()
+        if self.video is not None:
+            self.video.stream.pause = False
+            self.video.stream.stop()
 
         sys.stdout.flush()
 

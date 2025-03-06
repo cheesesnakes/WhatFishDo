@@ -2,7 +2,7 @@ from threading import Thread, Lock
 from queue import Queue
 import cv2
 import time
-from detect import load_model, detect_fish, draw_fish, track_fish
+from assets.detect import load_model, detect_fish, draw_fish, track_fish
 import sys
 
 
