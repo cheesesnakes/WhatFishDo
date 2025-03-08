@@ -292,6 +292,8 @@ class VideoPane(widgets.QLabel):
             formatted_time = self.calculate_time()
             self.time_label.setText(formatted_time)
             self.status_label.setText("Playing")
+        elif self.stream.Q.empty() and not self.stream.paused:
+            self.status_label.setText("Buffering")
 
     def sample_queue(self):
         # check if video is running
