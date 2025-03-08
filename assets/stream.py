@@ -121,7 +121,7 @@ class VideoStream:
         while not self.Q.empty():
             self.Q.get()
 
-        print("Queue cleared")
+        print("\rQueue cleared")
 
         return
 
