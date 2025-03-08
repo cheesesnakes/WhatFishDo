@@ -43,9 +43,6 @@ def cmdargs():
     parser.add_argument(
         "-t", "--track", help="Run with tracking algorythm.", action="store_true"
     )
-    parser.add_argument(
-        "-s", "--scale", help="Scale the video by factor.", type=int, default=2
-    )
 
     args = parser.parse_args()
 

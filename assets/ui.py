@@ -184,7 +184,6 @@ class VideoPane(widgets.QLabel):
                 useGPU=stream_properties["useGPU"],
                 detection=stream_properties["detection"],
                 tracking=stream_properties["tracking"],
-                scale=stream_properties["scale"],
             ).start()
 
             sys.stdout.write("\rInitialised.    ")

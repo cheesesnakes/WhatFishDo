@@ -37,7 +37,6 @@ def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
         "detection": detection,
         "tracking": tracking,
         "useGPU": useGPU,
-        "scale": scale,
         "sample_id": None,
         "Plot": None,
     }
@@ -80,4 +79,4 @@ if __name__ == "__main__":
 
     # run
 
-    app(useGPU=useGPU, detection=detection, tracking=tracking, scale=args.scale)
+    app(useGPU=useGPU, detection=detection, tracking=tracking)

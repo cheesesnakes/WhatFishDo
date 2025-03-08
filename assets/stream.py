@@ -18,7 +18,6 @@ class VideoStream:
         useGPU,
         skip_seconds=10,
         queue_size=1024,
-        scale=2,
     ):
         self.stream = cv2.VideoCapture(path, cv2.CAP_FFMPEG)
         self.frame_time = 0
@@ -37,7 +36,6 @@ class VideoStream:
         self.width = int(self.stream.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.trackers = []
-        self.scale = scale
 
         # switches
 
@@ -73,29 +71,6 @@ class VideoStream:
                     ret, frame = self.stream.read()
 
                     frame_time = self.stream.get(cv2.CAP_PROP_POS_MSEC)
-
-                    # resize the frame
-                    if self.scale != 1:
-                        if self.useGPU:
-                            gpu_frame = cv2.cuda_GpuMat()
-                            gpu_frame.upload(frame)
-                            gpu_frame = cv2.cuda.resize(
-                                gpu_frame,
-                                (
-                                    int(self.width / self.scale),
-                                    int(self.height / self.scale),
-                                ),
-                            )
-                            frame = gpu_frame.download()
-
-                        else:
-                            frame = cv2.resize(
-                                frame,
-                                (
-                                    int(self.width / self.scale),
-                                    int(self.height / self.scale),
-                                ),
-                            )
 
                     if not ret:
                         print(
