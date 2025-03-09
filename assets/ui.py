@@ -92,8 +92,10 @@ class VideoPane(widgets.QLabel):
         self.setMouseTracking(True)
         self.setSizePolicy(widgets.QSizePolicy.Expanding, widgets.QSizePolicy.Expanding)
         self.adjustSize()
-        self.setAlignment(Qt.AlignHCenter)
-        self.original_img = QImage(640, 480, QImage.Format_RGB888)
+        self.setAlignment(Qt.AlignCenter)
+
+        self.original_img = QImage(800, 600, QImage.Format_RGB888)
+        self.setPixmap(QPixmap.fromImage(self.original_img))
 
         self.init_status_bar()
 
@@ -106,20 +108,26 @@ class VideoPane(widgets.QLabel):
             self.stream = None
             self.quque = None
 
+        self.update()
+
     def init_status_bar(self):
         status_widget = widgets.QWidget()
+
         status_layout = widgets.QHBoxLayout(status_widget)
         status_layout.setContentsMargins(0, 0, 0, 0)
+
         self.cursor_label = widgets.QLabel()
         self.time_label = widgets.QLabel()
         self.status_label = widgets.QLabel()
         self.obs_label = widgets.QLabel()
         self.speed_label = widgets.QLabel()
+
         status_layout.addWidget(self.cursor_label)
         status_layout.addWidget(self.time_label)
         status_layout.addWidget(self.status_label)
         status_layout.addWidget(self.obs_label)
         status_layout.addWidget(self.speed_label)
+
         self.status_bar.addPermanentWidget(status_widget)
 
     def session(self):
@@ -479,8 +487,8 @@ class MenuBar(widgets.QMenuBar):
         dialog.exec_()
         if dialog.result() == 1:
             self.main_window.project_info = dialog.project_info
-            self.main_window.video = VideoPane(self.main_window)
-            self.main_window.splitter.replaceWidget(0, self.main_window.video)
+
+            self.main_window.reload_video()
 
             self.main_window.update_tables()
 
@@ -489,8 +497,8 @@ class MenuBar(widgets.QMenuBar):
         dialog.exec_()
         if dialog.result() == 1:
             self.main_window.project_info = dialog.project_info
-            self.main_window.video = VideoPane(self.main_window)
-            self.main_window.splitter.replaceWidget(0, self.main_window.video)
+
+            self.main_window.reload_video()
 
             self.main_window.update_tables()
 
@@ -731,14 +739,15 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         self.splitter = widgets.QSplitter(Qt.Horizontal)
 
         # Left Panel (Video)
-        video_container = widgets.QVBoxLayout()
-        video_container.setAlignment(Qt.AlignHCenter)
         self.video = VideoPane(self)
-        video_container.addWidget(self.video, alignment=Qt.AlignHCenter)
-        video_widget = widgets.QWidget()
-        video_widget.setLayout(video_container)
-        self.splitter.addWidget(video_widget)
 
+        video_layout = widgets.QHBoxLayout()
+        video_layout.addWidget(self.video)
+
+        video_widget = widgets.QWidget()
+        video_widget.setLayout(video_layout)
+
+        self.splitter.addWidget(video_widget)
         # Right Panel (Tables)
 
         if project_info is not None:
@@ -759,9 +768,7 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         self.splitter.addWidget(table_widget)
 
         # Ensure proper resizing
-        self.splitter.setStretchFactor(0, 2)  # More space to video
-        self.splitter.setStretchFactor(1, 1)
-        self.splitter.setSizes([1280, 720])  # Initial sizes
+        self.splitter.setSizes([800, 480])  # Initial sizes
 
         self.layout.addWidget(self.splitter)
 
@@ -882,3 +889,25 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         table_widget.setLayout(table_container)
 
         self.splitter.replaceWidget(1, table_widget)
+
+    def reload_video(self):
+        if self.project_info is not None:
+            self.video = VideoPane(self)
+
+            # remove status bar
+
+            self.statusBar().removeWidget(self.video.status_label)
+            self.statusBar().removeWidget(self.video.time_label)
+            self.statusBar().removeWidget(self.video.obs_label)
+            self.statusBar().removeWidget(self.video.speed_label)
+            self.statusBar().removeWidget(self.video.cursor_label)
+
+            # set video
+
+            video_layout = widgets.QHBoxLayout()
+            video_layout.addWidget(self.video)
+
+            video_widget = widgets.QWidget()
+            video_widget.setLayout(video_layout)
+
+            self.splitter.replaceWidget(0, video_widget)
