@@ -79,7 +79,7 @@ class VideoPane(widgets.QLabel):
         self.main_window = main_window
         self.project_info = main_window.project_info
         self.stream_properties = main_window.stream_properties
-        self.status_bar = main_window.status_bar
+        self.status_bar = main_window.statusBar()
 
         self.speed = DEFAULT_SPEED
         self.MouseX = 0
@@ -92,7 +92,7 @@ class VideoPane(widgets.QLabel):
         self.setMouseTracking(True)
         self.setSizePolicy(widgets.QSizePolicy.Expanding, widgets.QSizePolicy.Expanding)
         self.adjustSize()
-        self.setAlignment(Qt.AlignCenter)
+        self.setAlignment(Qt.AlignHCenter)
         self.original_img = QImage(640, 480, QImage.Format_RGB888)
 
         self.init_status_bar()
@@ -110,11 +110,11 @@ class VideoPane(widgets.QLabel):
         status_widget = widgets.QWidget()
         status_layout = widgets.QHBoxLayout(status_widget)
         status_layout.setContentsMargins(0, 0, 0, 0)
-        self.cursor_label = widgets.QLabel("X: 0, Y: 0")
-        self.time_label = widgets.QLabel("00:00:00")
-        self.status_label = widgets.QLabel("Ready")
-        self.obs_label = widgets.QLabel("None")
-        self.speed_label = widgets.QLabel(f"Speed: {self.speed}")
+        self.cursor_label = widgets.QLabel()
+        self.time_label = widgets.QLabel()
+        self.status_label = widgets.QLabel()
+        self.obs_label = widgets.QLabel()
+        self.speed_label = widgets.QLabel()
         status_layout.addWidget(self.cursor_label)
         status_layout.addWidget(self.time_label)
         status_layout.addWidget(self.status_label)
@@ -291,6 +291,7 @@ class VideoPane(widgets.QLabel):
                 self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
             )
             self.setPixmap(QPixmap.fromImage(scaled_img))
+            self.setAlignment(Qt.AlignCenter)
             self.adjustSize()
 
             # update status bar
@@ -726,15 +727,17 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         self.layout = widgets.QVBoxLayout(central_widget)
         self.setMenuBar(MenuBar(self))
 
-        # Status Bar
-        self.status_bar = self.statusBar()
-
         # Main Content Layout
         self.splitter = widgets.QSplitter(Qt.Horizontal)
 
         # Left Panel (Video)
+        video_container = widgets.QVBoxLayout()
+        video_container.setAlignment(Qt.AlignHCenter)
         self.video = VideoPane(self)
-        self.splitter.addWidget(self.video)
+        video_container.addWidget(self.video, alignment=Qt.AlignHCenter)
+        video_widget = widgets.QWidget()
+        video_widget.setLayout(video_container)
+        self.splitter.addWidget(video_widget)
 
         # Right Panel (Tables)
 
@@ -758,7 +761,7 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         # Ensure proper resizing
         self.splitter.setStretchFactor(0, 2)  # More space to video
         self.splitter.setStretchFactor(1, 1)
-        self.splitter.setSizes([800, 480])  # Initial sizes
+        self.splitter.setSizes([1280, 720])  # Initial sizes
 
         self.layout.addWidget(self.splitter)
 
