@@ -159,7 +159,7 @@ class VideoPane(widgets.QLabel):
 
         if queue is None:
             file, data, plot, sample_id = self.session()
-            self.quque = (plot, sample_id)
+            self.queue = (plot, sample_id)
         else:
             plot, sample_id = queue
 
@@ -523,7 +523,24 @@ class MenuBar(widgets.QMenuBar):
 
             return
 
-        queue = self.main_window.video.quque
+        queue = self.main_window.video.queue
+
+        if queue is not None:
+            plot, sample_id = queue
+
+            sample_ids = list(self.main_window.project_info["samples"][plot].keys())
+            sample_index = sample_ids.index(sample_id)
+
+            if sample_index < len(sample_ids) - 1:
+                sample_id = sample_ids[sample_index + 1]
+
+                self.main_window.video.stream.stop()
+                self.main_window.video.start_stream((plot, sample_id))
+        else:
+            dialog = widgets.QMessageBox()
+            dialog.setText("No sample loaded")
+            dialog.exec_()
+            return
 
         self.main_window.video.stream.stop()
 
@@ -555,7 +572,8 @@ class MenuBar(widgets.QMenuBar):
         else:
             dialog = widgets.QMessageBox()
             dialog.setText("No sample loaded")
-            dialog
+            dialog.exec_()
+            return
 
     def load_sample(self):
         if self.main_window.project_info is None:
