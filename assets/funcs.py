@@ -3,7 +3,6 @@
 
 import json
 import os
-import sys
 import argparse
 from PyQt5 import QtWidgets as widgets
 import cv2
@@ -177,11 +176,6 @@ class projectInit(widgets.QDialog):
         self.project_info["sample_n"] = self.sample_n.value()
         self.project_info["sample_s"] = self.sample_s.value()
 
-        # hidden fields
-        self.project_info["last_plot"] = ""
-        self.project_info["last_replicate"] = ""
-        self.project_info["last_sample"] = ""
-
         # calculate project status
 
         self.project_stats()
@@ -236,9 +230,11 @@ class projectInit(widgets.QDialog):
 
             for replicate in os.listdir(self.video_folder.text()):
                 for plot in os.listdir(self.video_folder.text() + "/" + replicate):
-                    time = 0
+                    time = []
+                    n_videos = 0
                     plot_id = str.join("_", [replicate, plot])
                     plot_info[plot_id] = {}
+
                     for video in os.listdir(
                         self.video_folder.text() + "/" + replicate + "/" + plot
                     ):
@@ -251,18 +247,26 @@ class projectInit(widgets.QDialog):
                             + "/"
                             + video
                         )
+
                         video = cv2.VideoCapture(video_path)
+
                         try:
                             if video.get(cv2.CAP_PROP_FPS) > 0:
                                 fps = video.get(cv2.CAP_PROP_FPS)
                             else:
                                 fps = 60
 
-                            time += video.get(cv2.CAP_PROP_FRAME_COUNT) / fps
+                            time.append(video.get(cv2.CAP_PROP_FRAME_COUNT) / fps)
+
+                            n_videos += 1
+
                         except ValueError:
                             raise ValueError(f"Error reading video file{video_path}")
 
-                    plot_info[plot_id]["time"] = time
+                    plot_info[plot_id]["time"] = sum(time)
+                    plot_info[plot_id]["min_vid"] = min(time)
+                    plot_info[plot_id]["max_vid"] = max(time)
+                    plot_info[plot_id]["n_videos"] = n_videos
                     plot_info[plot_id]["path"] = (
                         self.video_folder.text() + "/" + replicate + "/" + plot
                     )
@@ -275,27 +279,6 @@ class projectInit(widgets.QDialog):
                 [plot["time"] for plot in plot_info.values()]
             )
 
-            # calculate max video length
-
-            randmom_plot = random.choice(list(plot_info.keys()))
-
-            plot_path = plot_info[randmom_plot]["path"]
-
-            random_video = plot_path + "/" + os.listdir(plot_path)[0]
-
-            video = cv2.VideoCapture(random_video)
-
-            if not video.isOpened():
-                print(f"Error opening video file{random_video}")
-                sys.exit()
-
-            try:
-                self.project_info["max_time"] = video.get(
-                    cv2.CAP_PROP_FRAME_COUNT
-                ) / video.get(cv2.CAP_PROP_FPS)
-            except ValueError:
-                raise ValueError(f"Error reading video file{random_video}")
-
             # calculate subsample times
 
             samples = {}
@@ -304,87 +287,100 @@ class projectInit(widgets.QDialog):
                 for plot in plot_info.keys():
                     samples[plot] = {}
 
-                    # skip the first 10 minutes
+                    start_times = []
 
-                    start = 10 * 60
+                    available_space = int(
+                        plot_info[plot]["time"]
+                        - 10 * 60  # discard first 10 minutes
+                        - self.sample_s.value() * self.sample_n.value()
+                    )
 
-                    # end time
+                    if available_space < 0:
+                        raise ValueError(f"Sample size too large for plot {plot}")
 
-                    end = plot_info[plot]["time"]
+                    gaps = sorted(
+                        random.sample(range(0, available_space), self.sample_n.value())
+                    )
 
-                    # pick random times between start and end
+                    start_times = [
+                        gaps[i] + i * self.sample_s.value() + 10 * 60
+                        for i in range(0, self.sample_n.value())
+                    ]
 
-                    for i in range(self.sample_n.value()):
+                    for i in range(0, self.sample_n.value()):
                         sample_id = str.join("_", [plot, str(i)])
-                        samples[plot][sample_id] = {}
-                        samples[plot][sample_id]["start_time"] = random.uniform(
-                            start, end
-                        )
-                        samples[plot][sample_id]["status"] = "pending"
 
-                    # check if samples overlap
-
-                    duration = self.sample_s.value()
-
-                    for i in range(self.sample_n.value()):
-                        for j in range(self.sample_n.value()):
-                            if i == j:
-                                continue
-
-                            sample_id_i = str.join("_", [plot, str(i)])
-                            sample_id_j = str.join("_", [plot, str(j)])
-                            if (
-                                abs(
-                                    samples[plot][sample_id_i]["start_time"]
-                                    - samples[plot][sample_id_j]["start_time"]
-                                )
-                                < duration
-                            ):
-                                samples[plot][sample_id_j]["start_time"] -= duration
+                        samples[plot][sample_id] = {
+                            "start_time": start_times[i],
+                            "video": None,
+                            "status": "pending",
+                        }
 
                     # find sample video path
 
-                    for i in samples[plot].keys():
-                        vid_start = 0
+                    def find_video(self, start_time, plot_path):
+                        end_time = start_time + self.sample_s.value()
 
+                        vid_start = 0
                         vid_end = 0
 
-                        video_found = False
+                        found = False
 
-                        duration = self.sample_s.value()
+                        for video in os.listdir(plot_path):
+                            # load video
 
-                        for video in os.listdir(plot_info[plot]["path"]):
-                            video_path = plot_info[plot]["path"] + "/" + video
+                            video_path = plot_path + "/" + video
+                            stream = cv2.VideoCapture(video_path)
 
-                            video = cv2.VideoCapture(video_path)
+                            # check if video path is null
 
-                            if video.get(cv2.CAP_PROP_FPS) > 0:
-                                fps = video.get(cv2.CAP_PROP_FPS)
+                            if not video_path:
+                                raise ValueError(
+                                    f"Error reading video file {video_path}"
+                                )
 
+                            # check if video is valid
+
+                            if not stream.isOpened():
+                                raise ValueError(
+                                    f"Error reading video file {video_path}"
+                                )
+
+                            # check if start time is within video
+
+                            if stream.get(cv2.CAP_PROP_FPS) > 0:
+                                fps = stream.get(cv2.CAP_PROP_FPS)
                             else:
                                 fps = 60
 
-                            vid_end += video.get(cv2.CAP_PROP_FRAME_COUNT) / fps
+                            vid_end += stream.get(cv2.CAP_PROP_FRAME_COUNT) / fps
 
-                            if vid_end > samples[plot][i]["start_time"]:
-                                samples[plot][i]["video"] = video_path
+                            if vid_start <= start_time + 1 and vid_end + 1 >= end_time:
+                                found = True
+                                return video_path, start_time + 1 - vid_start
+                            else:
+                                vid_start = vid_end
 
-                                # adjust start time so sample is completely within video
+                        if not found:
+                            # adjust start time
+                            start_time = start_time + 30
+                            return find_video(self, start_time, plot_path)
 
-                                if vid_end - samples[plot][i]["start_time"] > duration:
-                                    samples[plot][i]["start_time"] = vid_end - duration
+                    for sample in samples[plot].keys():
+                        video_path, start_time = find_video(
+                            self,
+                            samples[plot][sample]["start_time"],
+                            plot_info[plot]["path"],
+                        )
 
-                                video_found = True
+                        samples[plot][sample]["video"] = video_path
+                        samples[plot][sample]["start_time"] = start_time
 
-                                samples[plot][i]["start_time"] -= vid_start
+                        # check if video is found
 
-                                break
-
-                            vid_start = vid_end
-
-                        if not video_found:
+                        if samples[plot][sample]["video"] is None:
                             raise ValueError(
-                                f"Error finding video for sample {i} in plot {plot}"
+                                f"Error finding video for sample {sample} in plot {plot}"
                             )
 
                 self.project_info["samples"] = samples
