@@ -235,6 +235,27 @@ class VideoPane(widgets.QLabel):
             self.stream.paused = True
 
     def update_frame(self):
+        # check if end of video
+
+        if (
+            self.stream.stream.get(cv2.CAP_PROP_POS_FRAMES)
+            >= self.stream.stream.get(cv2.CAP_PROP_FRAME_COUNT) - 1
+        ):
+            prompt = samplePrompt()
+            prompt.exec_()
+
+            if prompt.result() == 1:
+                self.stream.stop()
+
+                plot = self.stream.plot_id
+                sample_id = self.stream.sample_id
+
+                self.start_stream()
+
+                self.project_info["samples"][plot][sample_id]["status"] = "complete"
+            else:
+                self.stream.paused = True
+
         if not self.stream.Q.empty() and not self.stream.paused:
             # check if sample has ended
             self.sample_queue()
@@ -331,7 +352,7 @@ class VideoPane(widgets.QLabel):
                     # load next sample
                     self.project_info["samples"][plot][sample_id]["status"] = "complete"
                     self.stream.stop()
-                    self.start_stream(self.stream_properties)
+                    self.start_stream()
                 else:
                     self.stream.paused = True
 
