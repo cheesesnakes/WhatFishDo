@@ -3,6 +3,14 @@ import json
 import os
 from PyQt5 import QtWidgets as widgets
 
+# get data file name
+
+if os.path.exists("data/project.json"):
+    with open("data/project.json", "r") as f:
+        project = json.load(f)
+        data_file = project["data_file"]
+        data_folder = project["data_folder"]
+
 
 # save the image within the rectangle
 def save_image(frame, coordinates, fish_id):
@@ -12,20 +20,20 @@ def save_image(frame, coordinates, fish_id):
 
     # check if the directory exists
 
-    if not os.path.exists(data_folder + "fish_images/frames"):
-        os.makedirs(data_folder + "fish_images/frames")
+    if not os.path.exists(data_folder + "/" + "fish_images/frames"):
+        os.makedirs(data_folder + "/" + "fish_images/frames")
 
-    if not os.path.exists(data_folder + "fish_images/cropped"):
-        os.makedirs(data_folder + "fish_images/cropped")
+    if not os.path.exists(data_folder + "/" + "fish_images/cropped"):
+        os.makedirs(data_folder + "/" + "fish_images/cropped")
 
     # save the image
-    cv2.imwrite(data_folder + f"fish_images/frames/{fish_id}_frame.png", frame)
+    cv2.imwrite(data_folder + "/" + f"fish_images/frames/{fish_id}_frame.png", frame)
 
     # get the fish image
     fish_image = frame[y1:y2, x1:x2]
 
     # save the image
-    cv2.imwrite(data_folder + f"fish_images/cropped/{fish_id}.png", fish_image)
+    cv2.imwrite(data_folder + "/" + f"fish_images/cropped/{fish_id}.png", fish_image)
 
     print(f"\nImage saved successfully as fish_images/{fish_id}.png")
 

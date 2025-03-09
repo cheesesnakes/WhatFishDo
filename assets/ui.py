@@ -250,6 +250,11 @@ class VideoPane(widgets.QLabel):
                     int(self.pt2.y() / self.height() * frame.shape[0]),
                 )
 
+                # fix start and end points
+
+                pt1 = (min(pt1[0], pt2[0]), min(pt1[1], pt2[1]))
+                pt2 = (max(pt1[0], pt2[0]), max(pt1[1], pt2[1]))
+
                 cv2.rectangle(frame, pt1, pt2, (0, 255, 0), 2)
 
                 # pause the video
@@ -766,7 +771,8 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
 
         for key in data.keys():
             for subkey in ["coordinates", "file", "behaviour"]:
-                data[key].pop(subkey)
+                if subkey in data[key].keys():
+                    data[key].pop(subkey)
 
         df = pd.DataFrame.from_dict(data, orient="index")
 
@@ -818,6 +824,9 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
             return pd.DataFrame()
 
         if len(data) == 0:
+            return pd.DataFrame()
+
+        if "behaviour" not in data[list(data.keys())[-1]].keys():
             return pd.DataFrame()
 
         # select last individual
