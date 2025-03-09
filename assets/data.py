@@ -11,6 +11,18 @@ if os.path.exists("data/project.json"):
         data_file = project["data_file"]
         data_folder = project["data_folder"]
 
+# make time pretty
+
+
+def calculate_time(time):
+    hours = int(time // (60 * 60 * 1000))
+    minutes = int((time % (60 * 60 * 1000)) // (60 * 1000))
+    seconds = int((time % (60 * 1000)) // 1000)
+
+    if hours == 0:
+        return f"{minutes:02d}:{seconds:02d}"
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
 
 # save the image within the rectangle
 def save_image(frame, coordinates, fish_id):
@@ -177,6 +189,10 @@ def time_out(video, status_bar):
     # Get the last fish id
     fish_id = list(video.data.keys())[-1]
 
+    # Get time in
+
+    time_in = video.data[fish_id]["time_in"]
+
     # Get the time out
     time_out = video.frame_time
 
@@ -199,7 +215,7 @@ def time_out(video, status_bar):
         video.paused = True
 
     status_bar.setText(
-        f"\nFish {fish_id} has been recorded from {round(video.data[fish_id]['time_in'], 2)} to {round(time_out, 2)}\n"
+        f"\nFish {fish_id} has been recorded from {calculate_time(time_in)} to {calculate_time(time_out)}\n"
     )
 
 
@@ -307,7 +323,7 @@ def predators(video, frame, sizes, status_bar):
 
     # Alert on screen
     status_bar.setText(
-        f"\rPredator {predator_id}, species: {dialog.result['species']}, size: {dialog.result['size_class']}cm., time: {time_in}\n"
+        f"\rPredator {predator_id}, species: {dialog.result['species']}, size: {dialog.result['size_class']}cm., time: {calculate_time(time_in)}\n"
     )
 
 
@@ -334,4 +350,6 @@ def record_behaviour(video, key, status_bar, behaviors):
     save_to_json(video.data)
 
     # Alert on screen
-    status_bar.setText(f"Fish {fish_id} has been recorded to be {bhv} at {time}")
+    status_bar.setText(
+        f"Fish {fish_id} has been recorded to be {bhv} at {calculate_time(time)}\n"
+    )
