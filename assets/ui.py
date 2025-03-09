@@ -756,6 +756,11 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         if os.path.exists(data_file):
             with open(data_file, "r") as f:
                 data = json.load(f)
+        else:
+            return pd.DataFrame()
+
+        if len(data) == 0:
+            return pd.DataFrame()
 
         # remove subkeys coordinates, file, and behaviour
 
@@ -809,6 +814,11 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         if os.path.exists(data_file):
             with open(data_file, "r") as f:
                 data = json.load(f)
+        else:
+            return pd.DataFrame()
+
+        if len(data) == 0:
+            return pd.DataFrame()
 
         # select last individual
 
