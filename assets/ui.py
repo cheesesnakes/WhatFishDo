@@ -406,6 +406,8 @@ class VideoPane(widgets.QLabel):
             self.speed_label.setText(f"Speed: {self.speed}")
         elif event.key() == Qt.Key_Right:
             with self.stream.lock:
+                while not self.stream.Q.empty():
+                    self.stream.Q.get()
                 self.stream.skip(1)
         elif event.key() == Qt.Key_Left:
             with self.stream.lock:
@@ -414,6 +416,8 @@ class VideoPane(widgets.QLabel):
                 self.stream.skip(-1)
         elif event.key() == Qt.Key_Up:
             with self.stream.lock:
+                while not self.stream.Q.empty():
+                    self.stream.Q.get()
                 self.stream.skip(10)
         elif event.key() == Qt.Key_Down:
             with self.stream.lock:
