@@ -90,8 +90,8 @@ python app.py
 - Press `RIGHT` to skip forward 1 second.
 - Press `UP` to skip forward 10 seconds.
 - Press `DOWN` to skip backward 10 seconds.
-- Press `]` to increase speed.
-- Press `[` to decrease speed.
+- Press `j` to increase speed.
+- Press `k` to decrease speed.
 - Press `z` to stop the observation.
 - Press `p` to record a predator in frame.
 
