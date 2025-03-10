@@ -28,12 +28,14 @@ SPEED_STEP = 0.5
 
 # Define table class
 class indTable(widgets.QTableWidget):
-    def __init__(self, data, rows=10):
+    def __init__(self, data, rows=20):
         columns = len(data.columns)
         rows = min(rows, len(data))
         super().__init__(rows, columns)
         self.setHorizontalHeaderLabels(data.columns)
         if not data.empty:
+            # sort data by descending time_in
+            data = data.sort_values("Time In", ascending=False)
             self.populate_table(data, rows, columns)
         self.horizontalHeader().setSectionResizeMode(widgets.QHeaderView.Stretch)
 
@@ -45,12 +47,14 @@ class indTable(widgets.QTableWidget):
 
 
 class behTable(widgets.QTableWidget):
-    def __init__(self, data, rows=10):
+    def __init__(self, data, rows=20):
         columns = len(data.columns)
         rows = min(rows, len(data))
         super().__init__(rows, columns)
         self.setHorizontalHeaderLabels(data.columns)
         if not data.empty:
+            # sort by descending time
+            data = data.sort_values("time", ascending=False)
             self.populate_table(data, rows, columns)
         self.horizontalHeader().setSectionResizeMode(widgets.QHeaderView.Stretch)
 
@@ -105,7 +109,7 @@ class VideoPane(QGraphicsView):
         self.original_img = QImage(800, 600, QImage.Format_RGB888)
         self.pixmap_item.setPixmap(QPixmap.fromImage(self.original_img))
         self.fitInView(self.pixmap_item, Qt.KeepAspectRatio)
-        
+
         self.init_status_bar()
 
         self.loadBehaviour()
@@ -234,7 +238,6 @@ class VideoPane(QGraphicsView):
                 self.timer.timeout.connect(self.update_frame)
                 self.timer.start()
                 self.timer.setInterval(1000 // int(FPS * self.speed))
-                
 
             # show video
 
@@ -279,12 +282,11 @@ class VideoPane(QGraphicsView):
             # check if rectangle is drawn
 
             if self.pt1 and self.pt2 and not self.drawing:
-                
                 # map points in scene to frame adjust for aspect ratio
-                
+
                 pt1 = (int(self.pt1.x()), int(self.pt1.y()))
                 pt2 = (int(self.pt2.x()), int(self.pt2.y()))
-                
+
                 # fix start and end points
 
                 pt1 = (min(pt1[0], pt2[0]), min(pt1[1], pt2[1]))
@@ -298,7 +300,6 @@ class VideoPane(QGraphicsView):
                 # enter data
 
                 with self.stream.lock:
-
                     enter_data(
                         frame=frame,
                         data=self.stream.data,
@@ -315,14 +316,15 @@ class VideoPane(QGraphicsView):
                 # rest
                 self.pt1 = None
                 self.pt2 = None
-                
 
             # scale and add frame to video pane
 
             qt_img = self.cv_to_qt(frame)
             self.original_img = qt_img
             self.pixmap_item.setPixmap(QPixmap.fromImage(qt_img))
-            self.fitInView(self.pixmap_item, Qt.KeepAspectRatio)  # Ensure the pixmap item is scaled to fit the view
+            self.fitInView(
+                self.pixmap_item, Qt.KeepAspectRatio
+            )  # Ensure the pixmap item is scaled to fit the view
             self.update()
 
             # update status bar
@@ -355,6 +357,7 @@ class VideoPane(QGraphicsView):
                 if sample_prompt.result() == 1:
                     # load next sample
                     self.project_info["samples"][plot][sample_id]["status"] = "complete"
+
                     self.stream.stop()
                     self.start_stream()
                 else:
@@ -379,7 +382,6 @@ class VideoPane(QGraphicsView):
         super().resizeEvent(event)
 
     def mousePressEvent(self, event):
-        
         self.pt1 = self.mapToScene(event.pos()).toPoint()
         self.pt2 = self.pt1
         self.drawing = True
@@ -412,7 +414,6 @@ class VideoPane(QGraphicsView):
                 pt2.x() - pt1.x(),
                 pt2.y() - pt1.y(),
             )
-
 
     def loadBehaviour(self):
         project_info = self.project_info
@@ -463,7 +464,8 @@ class VideoPane(QGraphicsView):
             time_out(self.stream, self.obs_label)
             self.main_window.update_tables()
         elif event.key() == Qt.Key_P:
-            predators(self.stream, self.current_frame, self.sizes, self.obs_label)
+            self.stream.paused = True
+            predators(self, self.current_frame, self.sizes, self.obs_label)
         elif event.key() == Qt.Key_C:
             self.pt1 = None
             self.pt2 = None

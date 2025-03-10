@@ -281,18 +281,18 @@ class predatorDialog(widgets.QDialog):
 
 
 def predators(video, frame, sizes, status_bar):
-    global data_folder
+    data_folder = video.project_info["data_folder"]
 
     # load predator data from file, if it exists
     predators = {}
 
     # get deployment id
-    deployment_id = video.sample_id
+    deployment_id = video.stream.sample_id
 
     # make window
     # Variables
     predator_id = "_".join(["PRED", deployment_id, str(len(predators) + 1)])
-    time_in = video.frame_time
+    time_in = video.stream.frame_time
 
     dialog = predatorDialog(video, sizes)
     dialog.exec_()
@@ -308,17 +308,17 @@ def predators(video, frame, sizes, status_bar):
         "remarks": dialog.result["remarks"],
     }
 
-    cv2.imwrite(f"predator/{predator_id}.png", frame)
+    cv2.imwrite(data_folder + "/" + f"predators/{predator_id}.png", frame)
 
     # Save to json
-    if os.path.exists(data_folder + "predators.json"):
-        with open(data_folder + "predators.json", "r") as f:
+    if os.path.exists(data_folder + "/" + "predators.json"):
+        with open(data_folder + "/" + "predators.json", "r") as f:
             existing_data = json.load(f)
             existing_data.update(predators)
-        with open(data_folder + "predators.json", "w") as f:
+        with open(data_folder + "/" + "predators.json", "w") as f:
             json.dump(existing_data, f, indent=4)
     else:
-        with open(data_folder + "predators.json", "w") as f:
+        with open(data_folder + "/" + "predators.json", "w") as f:
             json.dump(predators, f, indent=4)
 
     # Alert on screen
