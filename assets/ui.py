@@ -8,8 +8,6 @@ from PyQt5 import QtWidgets as widgets
 from PyQt5.QtCore import Qt, QLibraryInfo, QTimer
 from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen, QFont, QIcon
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem
-from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen
-from PyQt5.QtCore import Qt
 from assets.data import enter_data, time_out, predators, record_behaviour
 from assets.stream import VideoStream
 from assets.funcs import projectInit, projectDialog
@@ -54,7 +52,8 @@ class behTable(widgets.QTableWidget):
         self.setHorizontalHeaderLabels(data.columns)
         if not data.empty:
             # sort by descending time
-            data = data.sort_values("time", ascending=False)
+            if "time" in data.columns:
+                data = data.sort_values("time", ascending=False)
             self.populate_table(data, rows, columns)
         self.horizontalHeader().setSectionResizeMode(widgets.QHeaderView.Stretch)
 
@@ -237,7 +236,7 @@ class VideoPane(QGraphicsView):
                 self.timer = QTimer(self)
                 self.timer.timeout.connect(self.update_frame)
                 self.timer.start()
-                self.timer.setInterval(1000 // int(FPS * self.speed))
+                self.timer.setInterval(int(1000 / (FPS * self.speed)))
 
             # show video
 
@@ -273,11 +272,20 @@ class VideoPane(QGraphicsView):
             # check if sample has ended
             self.sample_queue()
 
+            # calculate number of frames to skip
+
+            if self.speed > 1:
+                skip = int(self.speed)
+            else:
+                skip = 1
+
             # set frames
 
             frame, self.stream.frame_time = self.stream.Q.get()
 
-            self.current_frame = frame
+            for i in range(skip - 1):
+                if not self.stream.Q.empty():
+                    frame, self.stream.frame_time = self.stream.Q.get()
 
             # check if rectangle is drawn
 
@@ -331,6 +339,10 @@ class VideoPane(QGraphicsView):
             formatted_time = self.calculate_time()
             self.time_label.setText(formatted_time)
             self.status_label.setText("Playing")
+
+            # print current timer interval
+            print(self.timer.interval())
+
         elif self.stream.Q.empty() and not self.stream.paused:
             self.status_label.setText("Buffering")
         elif not self.stream.Q.empty() and self.stream.paused:
@@ -434,11 +446,20 @@ class VideoPane(QGraphicsView):
             self.status_label.setText("Paused" if self.stream.paused else "Playing")
         elif event.key() == Qt.Key_J:
             self.speed = max(MIN_SPEED, self.speed - SPEED_STEP)
-            self.timer.setInterval(1000 // int(FPS * self.speed))
+
+            dt = 1 / (self.speed * FPS)
+            interval = int(dt * 1000)
+
+            self.timer.setInterval(interval)
             self.speed_label.setText(f"Speed: {self.speed}")
+
         elif event.key() == Qt.Key_K:
             self.speed = min(MAX_SPEED, self.speed + SPEED_STEP)
-            self.timer.setInterval(1000 // int(FPS * self.speed))
+
+            dt = 1 / (self.speed * FPS)
+            interval = int(dt * 1000)
+
+            self.timer.setInterval(interval)
             self.speed_label.setText(f"Speed: {self.speed}")
         elif event.key() == Qt.Key_Right:
             with self.stream.lock:
@@ -465,7 +486,7 @@ class VideoPane(QGraphicsView):
             self.main_window.update_tables()
         elif event.key() == Qt.Key_P:
             self.stream.paused = True
-            predators(self, self.current_frame, self.sizes, self.obs_label)
+            predators(self, self.sizes, self.obs_label)
         elif event.key() == Qt.Key_C:
             self.pt1 = None
             self.pt2 = None
