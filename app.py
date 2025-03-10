@@ -9,7 +9,7 @@ import os
 from assets.funcs import cmdargs
 import time
 from assets.ui import MainWindow
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtGui
 
 
 def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
@@ -30,7 +30,7 @@ def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
     # start the app
 
     app = QtWidgets.QApplication([])
-
+    
     # set stream properties
 
     stream_properties = {

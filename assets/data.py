@@ -287,7 +287,7 @@ def predators(video, frame, sizes, status_bar):
     predators = {}
 
     # get deployment id
-    deployment_id = video.deployment_id
+    deployment_id = video.sample_id
 
     # make window
     # Variables

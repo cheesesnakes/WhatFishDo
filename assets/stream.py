@@ -118,8 +118,9 @@ class VideoStream:
         self.stream.release()
 
         # Clear queue
-        while not self.Q.empty():
-            self.Q.get()
+        with self.lock:
+            while not self.Q.empty():
+                self.Q.get()
 
         print("\rQueue cleared")
 

@@ -158,3 +158,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [YOLO-Fish](https://github.com/tamim662/YOLO-Fish/tree/main) for the pretrained model.
 - [OpenCV](https://opencv.org/) for the computer vision library.
+- <a href="https://www.flaticon.com/free-icons/ocean" title="ocean icons">Ocean icons created by Freepik - Flaticon</a>

@@ -6,7 +6,10 @@ import time
 import pandas as pd
 from PyQt5 import QtWidgets as widgets
 from PyQt5.QtCore import Qt, QLibraryInfo, QTimer
-from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen, QFont
+from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen, QFont, QIcon
+from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem
+from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen
+from PyQt5.QtCore import Qt
 from assets.data import enter_data, time_out, predators, record_behaviour
 from assets.stream import VideoStream
 from assets.funcs import projectInit, projectDialog
@@ -72,10 +75,11 @@ class samplePrompt(widgets.QDialog):
         self.setLayout(layout)
 
 
-class VideoPane(widgets.QLabel):
+class VideoPane(QGraphicsView):
     def __init__(self, main_window):
         super().__init__()
 
+        self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
         self.main_window = main_window
         self.project_info = main_window.project_info
         self.stream_properties = main_window.stream_properties
@@ -92,11 +96,16 @@ class VideoPane(widgets.QLabel):
         self.setMouseTracking(True)
         self.setSizePolicy(widgets.QSizePolicy.Expanding, widgets.QSizePolicy.Expanding)
         self.adjustSize()
-        self.setAlignment(Qt.AlignCenter)
+
+        self.scene = QGraphicsScene(self)
+        self.setScene(self.scene)
+        self.pixmap_item = QGraphicsPixmapItem()
+        self.scene.addItem(self.pixmap_item)
 
         self.original_img = QImage(800, 600, QImage.Format_RGB888)
-        self.setPixmap(QPixmap.fromImage(self.original_img))
-
+        self.pixmap_item.setPixmap(QPixmap.fromImage(self.original_img))
+        self.fitInView(self.pixmap_item, Qt.KeepAspectRatio)
+        
         self.init_status_bar()
 
         self.loadBehaviour()
@@ -106,7 +115,7 @@ class VideoPane(widgets.QLabel):
             self.start_stream()
         else:
             self.stream = None
-            self.quque = None
+            self.queue = None
 
         self.update()
 
@@ -223,8 +232,9 @@ class VideoPane(widgets.QLabel):
             if self.stream is not None:
                 self.timer = QTimer(self)
                 self.timer.timeout.connect(self.update_frame)
-                self.timer.start(1000 // (FPS * self.speed))
-                self.grabKeyboard()
+                self.timer.start()
+                self.timer.setInterval(1000 // int(FPS * self.speed))
+                
 
             # show video
 
@@ -269,16 +279,12 @@ class VideoPane(widgets.QLabel):
             # check if rectangle is drawn
 
             if self.pt1 and self.pt2 and not self.drawing:
-                # get points and draw
-                pt1 = (
-                    int(self.pt1.x() / self.width() * frame.shape[1]),
-                    int(self.pt1.y() / self.height() * frame.shape[0]),
-                )
-                pt2 = (
-                    int(self.pt2.x() / self.width() * frame.shape[1]),
-                    int(self.pt2.y() / self.height() * frame.shape[0]),
-                )
-
+                
+                # map points in scene to frame adjust for aspect ratio
+                
+                pt1 = (int(self.pt1.x()), int(self.pt1.y()))
+                pt2 = (int(self.pt2.x()), int(self.pt2.y()))
+                
                 # fix start and end points
 
                 pt1 = (min(pt1[0], pt2[0]), min(pt1[1], pt2[1]))
@@ -292,7 +298,6 @@ class VideoPane(widgets.QLabel):
                 # enter data
 
                 with self.stream.lock:
-                    self.releaseKeyboard()
 
                     enter_data(
                         frame=frame,
@@ -310,18 +315,15 @@ class VideoPane(widgets.QLabel):
                 # rest
                 self.pt1 = None
                 self.pt2 = None
-                self.grabKeyboard()
+                
 
             # scale and add frame to video pane
 
             qt_img = self.cv_to_qt(frame)
             self.original_img = qt_img
-            scaled_img = qt_img.scaled(
-                self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
-            )
-            self.setPixmap(QPixmap.fromImage(scaled_img))
-            self.setAlignment(Qt.AlignCenter)
-            self.adjustSize()
+            self.pixmap_item.setPixmap(QPixmap.fromImage(qt_img))
+            self.fitInView(self.pixmap_item, Qt.KeepAspectRatio)  # Ensure the pixmap item is scaled to fit the view
+            self.update()
 
             # update status bar
             formatted_time = self.calculate_time()
@@ -329,6 +331,8 @@ class VideoPane(widgets.QLabel):
             self.status_label.setText("Playing")
         elif self.stream.Q.empty() and not self.stream.paused:
             self.status_label.setText("Buffering")
+        elif not self.stream.Q.empty() and self.stream.paused:
+            self.update()
 
     def sample_queue(self):
         # check if video is running
@@ -366,48 +370,49 @@ class VideoPane(widgets.QLabel):
 
     def cv_to_qt(self, img):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        return QImage(img.data, img.shape[1], img.shape[0], QImage.Format_RGB888)
+        height, width, channel = img.shape
+        bytes_per_line = 3 * width
+        return QImage(img.data, width, height, bytes_per_line, QImage.Format_RGB888)
 
     def resizeEvent(self, event):
-        if not self.original_img.isNull():
-            scaled_img = self.original_img.scaled(
-                self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
-            )
-            self.setPixmap(QPixmap.fromImage(scaled_img))
-            self.adjustSize()
+        self.fitInView(self.pixmap_item, Qt.KeepAspectRatio)
         super().resizeEvent(event)
 
     def mousePressEvent(self, event):
-        self.grabKeyboard()
-        self.pt1 = event.pos()
-        self.pt2 = event.pos()
+        
+        self.pt1 = self.mapToScene(event.pos()).toPoint()
+        self.pt2 = self.pt1
         self.drawing = True
-        self.update()
+        self.scene.update()  # Trigger a repaint
 
     def mouseMoveEvent(self, event):
         if self.drawing:
-            self.pt2 = event.pos()
-            self.update()
-        self.MouseX = event.x()
-        self.MouseY = event.y()
+            self.pt2 = self.mapToScene(event.pos()).toPoint()
+            self.scene.update()  # Trigger a repaint
+        scene_pos = self.mapToScene(event.pos())
+        self.MouseX = int(scene_pos.x())
+        self.MouseY = int(scene_pos.y())
         self.cursor_label.setText(f"X: {self.MouseX}, Y: {self.MouseY}")
 
     def mouseReleaseEvent(self, event):
-        self.pt2 = event.pos()
+        self.pt2 = self.mapToScene(event.pos()).toPoint()
         self.drawing = False
-        self.update()
+        self.scene.update()  # Trigger a repaint
 
     def paintEvent(self, event):
         super().paintEvent(event)
         if self.drawing and self.pt1 and self.pt2:
-            painter = QPainter(self)
+            painter = QPainter(self.viewport())
             painter.setPen(QPen(Qt.red, 2, Qt.SolidLine))
+            pt1 = self.mapFromScene(self.pt1)
+            pt2 = self.mapFromScene(self.pt2)
             painter.drawRect(
-                self.pt1.x(),
-                self.pt1.y(),
-                self.pt2.x() - self.pt1.x(),
-                self.pt2.y() - self.pt1.y(),
+                pt1.x(),
+                pt1.y(),
+                pt2.x() - pt1.x(),
+                pt2.y() - pt1.y(),
             )
+
 
     def loadBehaviour(self):
         project_info = self.project_info
@@ -741,10 +746,10 @@ class MenuBar(widgets.QMenuBar):
 class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
     def __init__(self, project_info, stream_properties):
         super().__init__()
-
         self.project_info = project_info
         self.stream_properties = stream_properties
 
+        self.setWindowIcon(QIcon("icon.png"))
         self.setWindowTitle("WhatFishDo")
         self.setGeometry(50, 50, 1280, 720)
 
