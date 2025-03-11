@@ -6,13 +6,15 @@
 # setup imports
 import sys
 import os
+import json
 from assets.funcs import cmdargs
 import time
 from assets.ui import MainWindow
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtWidgets
 
 
-def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
+def app(detection=False, tracking=False, useGPU=False, project_path=None):
+    # clear the screen
     os.system("clear")
     # set environment variables
 
@@ -30,7 +32,7 @@ def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
     # start the app
 
     app = QtWidgets.QApplication([])
-    
+
     # set stream properties
 
     stream_properties = {
@@ -40,6 +42,17 @@ def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
         "sample_id": None,
         "Plot": None,
     }
+    # load project info
+
+    if project_path is not None:
+        if os.path.exists(project_path):
+            print(f"Loading project file {project_path}...")
+            with open(project_path, "r") as file:
+                project_info = json.load(file)
+        else:
+            print(f"Project file {project_path} not found.")
+            project_info = None
+
     # initialize the process
 
     sys.stdout.write("\rStart main window...            ")
@@ -49,7 +62,6 @@ def app(detection=False, tracking=False, useGPU=False, scale=2, Test=False):
 
     # start the main MainWindow
 
-    project_info = None
     window = MainWindow(project_info, stream_properties)
     window.show()
     sys.exit(app.exec_())
@@ -65,7 +77,7 @@ if __name__ == "__main__":
     useGPU = False
     detection = False
     tracking = False
-
+    project_path = None
     # check args
 
     if args.gpu:
@@ -77,6 +89,11 @@ if __name__ == "__main__":
     if args.track:
         tracking = True
 
+    if args.project:
+        project_path = args.project
+
     # run
 
-    app(useGPU=useGPU, detection=detection, tracking=tracking)
+    app(
+        useGPU=useGPU, detection=detection, tracking=tracking, project_path=project_path
+    )

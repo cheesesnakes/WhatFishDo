@@ -43,6 +43,8 @@ def cmdargs():
         "-t", "--track", help="Run with tracking algorythm.", action="store_true"
     )
 
+    parser.add_argument("-p", "--project", help="Load project file.", type=str)
+
     args = parser.parse_args()
 
     return args
