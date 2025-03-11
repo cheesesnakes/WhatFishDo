@@ -399,13 +399,3 @@ class projectInit(widgets.QDialog):
             self.size_file = file
         elif self.sender() == self.behaviour_file:
             self.behaviour_file = file
-
-
-def load_project():
-    project = projectDialog()
-    project.exec_()
-
-    if project.result() == 1:
-        return project.project_info
-    else:
-        return None

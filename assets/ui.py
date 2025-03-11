@@ -33,7 +33,7 @@ class indTable(widgets.QTableWidget):
         self.setHorizontalHeaderLabels(data.columns)
         if not data.empty:
             # sort data by descending time_in
-            data = data.sort_values("Time In", ascending=False)
+            data = data.sort_values("Individual ID", ascending=False)
             self.populate_table(data, rows, columns)
         self.horizontalHeader().setSectionResizeMode(widgets.QHeaderView.Stretch)
 
@@ -340,9 +340,6 @@ class VideoPane(QGraphicsView):
             self.time_label.setText(formatted_time)
             self.status_label.setText("Playing")
 
-            # print current timer interval
-            print(self.timer.interval())
-
         elif self.stream.Q.empty() and not self.stream.paused:
             self.status_label.setText("Buffering")
         elif not self.stream.Q.empty() and self.stream.paused:
@@ -368,7 +365,15 @@ class VideoPane(QGraphicsView):
 
                 if sample_prompt.result() == 1:
                     # load next sample
-                    self.project_info["samples"][plot][sample_id]["status"] = "complete"
+                    self.project_info["samples"][plot][sample_id]["status"] = (
+                        "completed"
+                    )
+
+                    # save project file
+
+                    if os.path.exists(self.main_window.project_path):
+                        with open(self.main_window.project_path, "w") as f:
+                            json.dump(self.project_info, f)
 
                     self.stream.stop()
                     self.start_stream()
@@ -546,6 +551,7 @@ class MenuBar(widgets.QMenuBar):
         dialog.exec_()
         if dialog.result() == 1:
             self.main_window.project_info = dialog.project_info
+            self.main_window.project_path = dialog.project.text()
 
             self.main_window.reload_video()
 
