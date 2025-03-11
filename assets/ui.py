@@ -170,7 +170,10 @@ class VideoPane(QGraphicsView):
                             file = project_info["samples"][plot][sample]["video"]
                             plot = plot
                             sample_id = sample
+                            found = True
                             break
+                    if found:
+                        break
 
         return file, data, plot, sample_id
 
@@ -214,6 +217,8 @@ class VideoPane(QGraphicsView):
             if sample_id is not None:
                 sys.stdout.write("\rSearching for last fish...")
                 sys.stdout.flush()
+
+                print(f"Plot: {plot}", f"Sample ID: {sample_id}", sep="\n")
 
                 start_time = self.project_info["samples"][plot][sample_id]["start_time"]
 
@@ -773,10 +778,11 @@ class MenuBar(widgets.QMenuBar):
 
 # Define main window class
 class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
-    def __init__(self, project_info, stream_properties):
+    def __init__(self, project_info, project_path, stream_properties):
         super().__init__()
         self.project_info = project_info
         self.stream_properties = stream_properties
+        self.project_path = project_path
 
         self.setWindowIcon(QIcon("icon.png"))
         self.setWindowTitle("WhatFishDo")

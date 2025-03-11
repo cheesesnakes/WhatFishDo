@@ -52,6 +52,8 @@ def app(detection=False, tracking=False, useGPU=False, project_path=None):
         else:
             print(f"Project file {project_path} not found.")
             project_info = None
+    else:
+        project_info = None
 
     # initialize the process
 
@@ -62,7 +64,7 @@ def app(detection=False, tracking=False, useGPU=False, project_path=None):
 
     # start the main MainWindow
 
-    window = MainWindow(project_info, stream_properties)
+    window = MainWindow(project_info, project_path, stream_properties)
     window.show()
     sys.exit(app.exec_())
 
