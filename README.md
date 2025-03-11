@@ -52,7 +52,8 @@ WhatFishDo is a tool designed to assist researchers in annotating behavior from 
 - `-g, --gpu`: Run detection model with CUDA.
 - `-d, --detect`: Run with detection model.
 - `-t, --track`: Run with tracking algorithm.
-
+- `-p`, `--project`: Specify project file.
+ 
 ### Running the Tool
 
 I recommend using [`uv`](https://docs.astral.sh/uv/) package and environment manager. With `uv` you can simply use the following command to run the application:
