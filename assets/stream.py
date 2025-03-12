@@ -35,6 +35,10 @@ class VideoStream:
         self.Q = Queue(maxsize=queue_size)
         self.width = int(self.stream.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        if detection or tracking:
+            self.detect_Q = Queue(maxsize=queue_size)
+
         self.trackers = []
 
         # switches
@@ -51,6 +55,8 @@ class VideoStream:
             # load model
 
             load_model(self)
+            detect_thread = Thread(target=self.detect, daemon=True)
+            detect_thread.start()
 
         # Create and track threads
         read_thread = Thread(target=self.read, daemon=True)
@@ -81,10 +87,10 @@ class VideoStream:
 
                         break
 
-                    if self.detection:
-                        frame = self.detect(frame)
-
-                    self.Q.put([frame, frame_time])
+                    if self.detection or self.tracking:
+                        self.detect_Q.put([frame, frame_time])
+                    else:
+                        self.Q.put([frame, frame_time])
 
             else:
                 time.sleep(10)
@@ -94,20 +100,38 @@ class VideoStream:
 
                 continue
 
-    def detect(self, frame):
-        # detect fish
+    def detect(self):
+        # get frames from the queue
+        while True:
+            if self.stopped:
+                sys.stdout.write("Stopped detection\n")
+                sys.stdout.flush()
 
-        boxes, confidences = detect_fish(self, frame)
+                break
 
-        # draw fish
+            if not self.detect_Q.empty():
+                with self.lock:
+                    frame, frame_time = self.detect_Q.get()
 
-        if self.tracking:
-            frame = track_fish(self, frame, boxes, confidences)
+                    boxes, confidences = detect_fish(self, frame)
 
-        else:
-            frame = draw_fish(self, frame, boxes, confidences)
+                    if self.tracking:
+                        self.Q.put(
+                            [track_fish(self, frame, boxes, confidences), frame_time]
+                        )
 
-        return frame
+                    else:
+                        self.Q.put(
+                            [draw_fish(self, frame, boxes, confidences), frame_time]
+                        )
+
+            else:
+                time.sleep(10)
+
+                sys.stdout.write("\rDetect queue empty")
+                sys.stdout.flush()
+
+                continue
 
     def stop(self):
         # set stop state
@@ -116,6 +140,9 @@ class VideoStream:
 
         # Release resources
         self.stream.release()
+
+        if self.detection:
+            self.detect_Q.queue.clear()
 
         # Clear queue
         with self.lock:
