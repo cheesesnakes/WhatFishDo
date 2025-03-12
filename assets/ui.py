@@ -8,7 +8,13 @@ from PyQt5 import QtWidgets as widgets
 from PyQt5.QtCore import Qt, QLibraryInfo, QTimer
 from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen, QFont, QIcon
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem
-from assets.data import enter_data, time_out, predators, record_behaviour
+from assets.data import (
+    calculate_time,
+    enter_data,
+    time_out,
+    predators,
+    record_behaviour,
+)
 from assets.stream import VideoStream
 from assets.funcs import projectInit, projectDialog
 
@@ -31,9 +37,20 @@ class indTable(widgets.QTableWidget):
         rows = min(rows, len(data))
         super().__init__(rows, columns)
         self.setHorizontalHeaderLabels(data.columns)
+        # make time in and time out pretty
+        if "Time In" in data.columns:
+            # convert to str
+            data["Time In"] = data["Time In"].astype(str)
+            for i in range(len(data)):
+                data.loc[i, "Time In"] = calculate_time(data.loc[i, "Time In"])
+        if "Time Out" in data.columns:
+            # convert to str
+            data["Time Out"] = data["Time Out"].astype(str)
+            for i in range(len(data)):
+                data.loc[i, "Time Out"] = calculate_time(data.loc[i, "Time Out"])
         if not data.empty:
-            # sort data by descending time_in
-            data = data.sort_values("Individual ID", ascending=False)
+            # sort data by descending index
+            data = data.sort_index(ascending=False)
             self.populate_table(data, rows, columns)
         self.horizontalHeader().setSectionResizeMode(widgets.QHeaderView.Stretch)
 
@@ -50,10 +67,15 @@ class behTable(widgets.QTableWidget):
         rows = min(rows, len(data))
         super().__init__(rows, columns)
         self.setHorizontalHeaderLabels(data.columns)
+        # make time pretty
+        if "Time" in data.columns:
+            # convert to str
+            data["Time"] = data["Time"].astype(str)
+            for i in range(len(data)):
+                data.loc[i, "Time"] = calculate_time(data.loc[i, "Time"])
         if not data.empty:
             # sort by descending time
-            if "time" in data.columns:
-                data = data.sort_values("time", ascending=False)
+            data = data.sort_index(ascending=False)
             self.populate_table(data, rows, columns)
         self.horizontalHeader().setSectionResizeMode(widgets.QHeaderView.Stretch)
 
@@ -931,6 +953,10 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         # get behaviour data
 
         data = data[last_ind]["behaviour"]
+
+        # rename columns
+
+        data = pd.DataFrame(data, columns=["Time", "Behaviour"])
 
         # list to dataframe
 

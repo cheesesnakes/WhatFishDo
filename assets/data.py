@@ -1,3 +1,4 @@
+from math import isnan
 import cv2
 import json
 import os
@@ -15,6 +16,11 @@ if os.path.exists("data/project.json"):
 
 
 def calculate_time(time):
+    time = float(time)
+
+    if time is None or isnan(time):
+        return "--:--"
+
     hours = int(time // (60 * 60 * 1000))
     minutes = int((time % (60 * 60 * 1000)) // (60 * 1000))
     seconds = int((time % (60 * 1000)) // 1000)
