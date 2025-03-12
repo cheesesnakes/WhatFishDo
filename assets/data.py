@@ -283,7 +283,7 @@ class predatorDialog(widgets.QDialog):
 def predators(video, sizes, status_bar):
     data_folder = video.project_info["data_folder"]
 
-    frame = video.stream.Q.get()
+    frame = video.current_frame
 
     # load predator data from file, if it exists
     predators = {}

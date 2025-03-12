@@ -288,6 +288,8 @@ class VideoPane(QGraphicsView):
 
             frame, self.stream.frame_time = self.stream.Q.get()
 
+            self.current_frame = frame
+
             for i in range(skip - 1):
                 if not self.stream.Q.empty():
                     frame, self.stream.frame_time = self.stream.Q.get()
