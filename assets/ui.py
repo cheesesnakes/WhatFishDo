@@ -171,6 +171,7 @@ class VideoPane(QGraphicsView):
         plot = None
         file = None
         data = {}
+        found = False
 
         # load data file
         data_file = project_info["data_file"]
