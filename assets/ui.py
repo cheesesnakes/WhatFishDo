@@ -68,11 +68,11 @@ class behTable(widgets.QTableWidget):
         super().__init__(rows, columns)
         self.setHorizontalHeaderLabels(data.columns)
         # make time pretty
-        if "Time" in data.columns:
+        if "time" in data.columns:
             # convert to str
-            data["Time"] = data["Time"].astype(str)
+            data["time"] = data["time"].astype(str)
             for i in range(len(data)):
-                data.loc[i, "Time"] = calculate_time(data.loc[i, "Time"])
+                data.loc[i, "time"] = calculate_time(data.loc[i, "time"])
         if not data.empty:
             # sort by descending time
             data = data.sort_index(ascending=False)
@@ -953,10 +953,6 @@ class MainWindow(widgets.QMainWindow):  # Inherit from QMainWindow
         # get behaviour data
 
         data = data[last_ind]["behaviour"]
-
-        # rename columns
-
-        data = pd.DataFrame(data, columns=["Time", "Behaviour"])
 
         # list to dataframe
 
